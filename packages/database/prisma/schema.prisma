@@ -1,0 +1,77 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id @default(uuid())
+  username       String   @unique
+  email          String   @unique
+  password   String
+  profilePicture String?
+  status         String   @default("offline") // online, offline, busy
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  conversations  ConversationParticipant[]
+  messages       Message[]
+  messageStatus MessageStatus[]
+}
+
+model Conversation {
+  id           String   @id @default(uuid())
+  isGroup      Boolean  @default(false)
+  groupName    String?  // Null if it's a DM
+  createdAt    DateTime @default(now())
+
+  participants ConversationParticipant[]
+  messages     Message[]
+}
+
+model ConversationParticipant {
+  id             String       @id @default(uuid())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  role           String       @default("member") // admin, member (for groups)
+  joinedAt       DateTime     @default(now())
+
+  @@unique([conversationId, userId]) // Ensures a user can't join the same conversation twice
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  senderId       String
+  content        String?
+  messageType    String       @default("text") // text, image, video, file
+  attachmentUrl  String?
+  createdAt      DateTime     @default(now())
+
+  statusUpdates  MessageStatus[]
+}
+
+model MessageStatus {
+  id         String   @id @default(uuid())
+  message    Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  messageId  String
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status     String   @default("sent") // sent, delivered, read
+  updatedAt  DateTime @updatedAt
+
+  @@unique([messageId, userId]) // Ensures a user has only one status per message
+}
