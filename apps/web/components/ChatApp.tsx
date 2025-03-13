@@ -41,6 +41,7 @@ export function ChatApp() {
 
         // if currently opened conversation has id = covnversationID, this updates the ui
         if (conversationId === currentConvoId.current) {
+          // update the ui
           setMessages((prev) => [
             ...prev,
             {
@@ -65,36 +66,55 @@ export function ChatApp() {
             .catch((reject) => {
               console.log("Could not update the Message Status");
             });
-        }
 
-        // Update conversations list
-        // This is on the client side , updating the ui
-        setConversations((prev) => {
-          const updated = prev.map((convo) => {
-            if (convo.id === conversationId) {
-              convo._count.messages += 1;
-
-              if (convo.messages[0]) {
-                convo.messages[0].content = response.data.message
-                  ?.content as string;
-                convo.messages[0].createdAt = response.data.message
-                  ?.createdAt as Date;
-                convo.messages[0].messageType = "compose";
+          setConversations((prev) => {
+            const updated = prev.map((convo) => {
+              if (convo.id === conversationId) {
+                convo._count.messages = 0;
               }
-            }
-            return convo;
-          });
+              return convo;
+            });
 
-          return [...updated].sort((a, b) => {
-            const dateA = a.messages[0]?.createdAt
-              ? new Date(a.messages[0].createdAt).getTime()
-              : 0;
-            const dateB = b.messages[0]?.createdAt
-              ? new Date(b.messages[0].createdAt).getTime()
-              : 0;
-            return dateB - dateA;
+            return [...updated].sort((a, b) => {
+              const dateA = a.messages[0]?.createdAt
+                ? new Date(a.messages[0].createdAt).getTime()
+                : 0;
+              const dateB = b.messages[0]?.createdAt
+                ? new Date(b.messages[0].createdAt).getTime()
+                : 0;
+              return dateB - dateA;
+            });
           });
-        });
+        } else {
+          // Update conversations list
+          // This is on the client side , updating the ui
+          setConversations((prev) => {
+            const updated = prev.map((convo) => {
+              if (convo.id === conversationId) {
+                convo._count.messages += 1;
+
+                if (convo.messages[0]) {
+                  convo.messages[0].content = response.data.message
+                    ?.content as string;
+                  convo.messages[0].createdAt = response.data.message
+                    ?.createdAt as Date;
+                  convo.messages[0].messageType = "compose";
+                }
+              }
+              return convo;
+            });
+
+            return [...updated].sort((a, b) => {
+              const dateA = a.messages[0]?.createdAt
+                ? new Date(a.messages[0].createdAt).getTime()
+                : 0;
+              const dateB = b.messages[0]?.createdAt
+                ? new Date(b.messages[0].createdAt).getTime()
+                : 0;
+              return dateB - dateA;
+            });
+          });
+        }
 
         // Clear incoming message state
         setIncomingMessage(null);

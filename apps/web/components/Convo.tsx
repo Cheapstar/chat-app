@@ -180,19 +180,19 @@ export function Message({ message }: { message: MessageType }) {
           ${message.sender ? "bg-gray-700 text-white" : "bg-white text-black"} `}
         >
           {/* Content */}
-          <div className="max-w-[400px] max-h-[400px] px-2 py-2">
-            {message.attachmentUrl && (
+          {message.attachmentUrl && (
+            <div className="max-w-[400px] max-h-[400px] px-2 py-2">
               <img
                 src={`${imgUrl}`}
                 alt="User Uploaded Image"
                 className="object-contain bg-white cursor-pointer"
                 onClick={() => setExpandImage(true)}
               />
-            )}
-          </div>
+            </div>
+          )}
           <div>
             {message.content && (
-              <p className=" pl-4 py-2 max-w-60 text-wrap break-words p-18">
+              <p className=" pl-3 py-2 max-w-60 text-wrap break-words pr-18">
                 {message.content}
               </p>
             )}
