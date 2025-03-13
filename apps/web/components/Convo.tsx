@@ -19,6 +19,7 @@ import moment from "moment";
 import { LiaCheckDoubleSolid } from "react-icons/lia";
 import { MessageType } from "../store/store";
 import axios from "axios";
+import { RxCross1 } from "react-icons/rx";
 
 export function Convo() {
   const [messages, setMessages] = useAtom(messagesAtom);
@@ -160,6 +161,8 @@ export function Convo() {
 }
 
 export function Message({ message }: { message: MessageType }) {
+  const [expandImage, setExpandImage] = useState<boolean>(false);
+
   const fromServer = message.attachmentUrl?.includes("chat-app");
   let imgUrl = "";
   if (fromServer) {
@@ -169,40 +172,71 @@ export function Message({ message }: { message: MessageType }) {
   }
 
   return (
-    <div className={`flex ${message.sender ? "justify-end" : "justify-start"}`}>
+    <>
       <div
-        className={`flex   relative rounded-md overflow-hidden
-             ${message.sender ? "bg-blue-400 text-white" : "bg-white text-black"} `}
+        className={`flex ${message.sender ? "justify-end" : "justify-start"}`}
       >
-        <div className="max-w-[400px] max-h-[400px] ">
-          {message.attachmentUrl && (
-            <img
-              src={`${imgUrl}`}
-              alt="User Uploaded Image"
-              className="object-contain bg-white"
-            />
-          )}
-        </div>
-        {message.content && (
-          <p className=" pl-4 py-2 max-w-60 text-wrap break-words p-18">
-            {message.content}
-          </p>
-        )}
-
-        <div className="absolute bottom-0 right-2 flex gap-1">
-          <p className="text-[10px] text-gray-300 flex items-end px-2 py-2">
-            {moment(message.createdAt).format("HH:MM")}
-          </p>
-          {message.sender && (
-            <p className="flex items-end pr-0.5 pb-2">
-              <LiaCheckDoubleSolid
-                className={`text-lg transition-all ${message.status === "read" ? "text-black" : "text-gray-200"} `}
+        <div
+          className={`flex   relative rounded-md overflow-hidden
+          ${message.sender ? "bg-gray-700 text-white" : "bg-white text-black"} `}
+        >
+          <div className="max-w-[400px] max-h-[400px] px-2 py-2">
+            {message.attachmentUrl && (
+              <img
+                src={`${imgUrl}`}
+                alt="User Uploaded Image"
+                className="object-contain bg-white cursor-pointer"
+                onClick={() => setExpandImage(true)}
               />
+            )}
+          </div>
+          {message.content && (
+            <p className=" pl-4 py-2 max-w-60 text-wrap break-words p-18">
+              {message.content}
             </p>
           )}
+
+          <div className="absolute bottom-0 right-2 flex gap-1">
+            <p className="text-[10px] text-gray-300 flex items-end px-2 py-2">
+              {moment(message.createdAt).format("HH:MM")}
+            </p>
+            {message.sender && (
+              <p className="flex items-end pr-0.5 pb-2">
+                <LiaCheckDoubleSolid
+                  className={`text-lg transition-all ${message.status === "read" ? "text-green-400" : "text-gray-200"} `}
+                />
+              </p>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+      {expandImage && (
+        // Overlay
+        <div
+          className="fixed h-[100vh] w-[100vw] inset-0 bg-gray-400/30 z-[10000] 
+                backdrop-blur-3xl flex justify-center items-center overflow-auto"
+          onClick={() => setExpandImage(false)}
+        >
+          <button
+            className="absolute cursor-pointer right-6 top-4"
+            onClick={() => setExpandImage(false)}
+          >
+            <RxCross1 className="text-5xl text-white" />
+          </button>
+
+          <div
+            className=" h-[80vh] max-w-[80vw] flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={imgUrl}
+              className="object-contain w-[100%] h-[100%]"
+              alt="image"
+            />
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
