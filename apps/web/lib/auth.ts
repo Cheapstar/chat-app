@@ -26,13 +26,21 @@ export const authOptions: AuthOptions = {
         }
 
         // Compare hashed password
-        const isValidPassword = await bcrypt.compare(credentials.password, user.password);
+        const isValidPassword = await bcrypt.compare(
+          credentials.password,
+          user.password
+        );
 
         if (!isValidPassword) {
           throw new Error("Invalid credentials.");
         }
 
-        return { id: user.id, email: user.email, name: user.username,image:user.profilePicture };
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.username,
+          image: user.profilePicture,
+        };
       },
     }),
   ],
@@ -46,19 +54,14 @@ export const authOptions: AuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.picture = user.image
-        console.log("User",user);
-        console.log("Token",token);
+        token.picture = user.image;
       }
       return token;
     },
     async session({ session, token }) {
-      
       if (session.user) {
-        console.log("session",session);
         session.user.userId = token.sub;
-        session.user.image = token.picture
-        console.log("token",token);
+        session.user.image = token.picture;
       }
       return session;
     },

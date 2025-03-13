@@ -1,34 +1,32 @@
+// import {prisma} from "@repo/database"
 
-import {prisma} from "@repo/database"
+// export async function updateStatus(
+//     {
+//         conversationId,
+//         senderId
+//     }:{
+//         conversationId:string,
+//         senderId:string
+//     }
+// ){
+//     try {
+//         const messagesStatus = await prisma.messageStatus.updateMany({
+//             where:{
+//                 message:{
+//                     conversationId:conversationId,
+//                     senderId:{not:senderId}
+//                 },
 
-export async function updateStatus(
-    {
-        conversationId,
-        senderId
-    }:{
-        conversationId:string,
-        senderId:string
-    }
-){
-    try {
-        const messagesStatus = await prisma.messageStatus.updateMany({
-            where:{
-                message:{
-                    conversationId:conversationId,
-                    senderId:{not:senderId}
-                },
-                
-            },
-            data:{
-                status:"READ"
-            }
-        });
+//             },
+//             data:{
+//                 status:"READ"
+//             }
+//         });
 
+//         return true;
 
-        return true;
-
-    } catch (error) {
-        console.log("Some Error Occured while updating the Status");
-        return false;
-    }
-}
+//     } catch (error) {
+//         console.log("Some Error Occured while updating the Status");
+//         return false;
+//     }
+// }

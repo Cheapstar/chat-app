@@ -11,12 +11,14 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@repo/cloudinary":"*",
+    "@repo/websocketclient": "*",
     "@hookform/resolvers": "^3.10.0",
+    "@repo/cloudinary": "*",
     "@repo/database": "*",
     "@repo/ui": "*",
     "@tailwindcss/postcss": "^4.0.1",
     "@types/bcrypt": "^5.0.2",
+    "axios": "^1.8.3",
     "bcrypt": "^5.1.1",
     "cloudinary": "^2.5.1",
     "jotai": "^2.11.1",

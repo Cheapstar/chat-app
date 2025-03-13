@@ -24,12 +24,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="min-h-screen">
-      <body className={`${geistSans.variable} ${geistMono.variable} min-h-screen`}>
-        <Provider>
-          <WebSocketProvider></WebSocketProvider>
-          {children}
-        </Provider>
+    <html
+      lang="en"
+      className="min-h-screen"
+    >
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} min-h-screen`}
+      >
+        <Provider>{children}</Provider>
       </body>
     </html>
   );
