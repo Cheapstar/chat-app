@@ -136,18 +136,17 @@ export function Convo() {
 
       {showPreview && (
         <>
-          <div className="absolute bottom-16 rounded-md right-6">
-            <div className="relative">
+          <div className="absolute h-[80%] w-[100%] bottom-16   bg-gray-400/30  backdrop-blur-3xl ">
+            <div className="relative h-[100%] w-[100%]">
               <Preview src={showPreview} />
               <button
                 type="button"
-                className="bg-white border-1 cursor-pointer
-                                                     shadow-2xl px-2 rounded-full absolute -top-2.5 -right-2.5"
+                className="cursor-pointer rounded-full absolute right-2 top-2"
                 onClick={() => {
                   setShowPreview("");
                 }}
               >
-                X
+                <RxCross1 className="text-2xl text-black"></RxCross1>
               </button>
             </div>
           </div>
@@ -177,9 +176,10 @@ export function Message({ message }: { message: MessageType }) {
         className={`flex ${message.sender ? "justify-end" : "justify-start"}`}
       >
         <div
-          className={`flex   relative rounded-md overflow-hidden
+          className={`flex   relative rounded-md overflow-hidden flex-col
           ${message.sender ? "bg-gray-700 text-white" : "bg-white text-black"} `}
         >
+          {/* Content */}
           <div className="max-w-[400px] max-h-[400px] px-2 py-2">
             {message.attachmentUrl && (
               <img
@@ -190,11 +190,13 @@ export function Message({ message }: { message: MessageType }) {
               />
             )}
           </div>
-          {message.content && (
-            <p className=" pl-4 py-2 max-w-60 text-wrap break-words p-18">
-              {message.content}
-            </p>
-          )}
+          <div>
+            {message.content && (
+              <p className=" pl-4 py-2 max-w-60 text-wrap break-words p-18">
+                {message.content}
+              </p>
+            )}
+          </div>
 
           <div className="absolute bottom-0 right-2 flex gap-1">
             <p className="text-[10px] text-gray-300 flex items-end px-2 py-2">
@@ -246,12 +248,12 @@ function Preview({ src }: { src: string }) {
   }, []);
 
   return (
-    <div className="bg-white max-w-[400px] max-h-[400px] rounded-md overflow-hidden">
+    <div className=" h-[100%] w-[100%] rounded-md overflow-hidden flex justify-center items-center px-2 py-4">
       {src ? (
         <img
           src={`${src}`}
           alt="User Uploaded Image"
-          className="object-contain"
+          className="object-contain h-[100%] w-[100%]"
         />
       ) : (
         <p className="text-red-400 text-sm">*Could not load the image</p>
