@@ -161,6 +161,7 @@ export function Convo() {
 
 export function Message({ message }: { message: MessageType }) {
   const [expandImage, setExpandImage] = useState<boolean>(false);
+  const [isZoomed, setIsZoomed] = useState<boolean>(false);
 
   const fromServer = message.attachmentUrl?.includes("chat-app");
   let imgUrl = "";
@@ -232,8 +233,13 @@ export function Message({ message }: { message: MessageType }) {
           >
             <img
               src={imgUrl}
-              className="object-contain w-[100%] h-[100%]"
+              className={`object-contain w-[100%] h-[100%] ${
+                isZoomed
+                  ? "scale-200 cursor-zoom-out"
+                  : "scale-100 cursor-zoom-in"
+              }`}
               alt="image"
+              onClick={() => setIsZoomed(!isZoomed)}
             />
           </div>
         </div>
@@ -247,13 +253,18 @@ function Preview({ src }: { src: string }) {
     console.log("Hi from Preview", src);
   }, []);
 
+  const [isZoomed, setIsZoomed] = useState<boolean>(false);
+
   return (
     <div className=" h-[100%] w-[100%] rounded-md overflow-hidden flex justify-center items-center px-2 py-4">
       {src ? (
         <img
           src={`${src}`}
           alt="User Uploaded Image"
-          className="object-contain h-[100%] w-[100%]"
+          className={`object-contain w-[100%] h-[100%] ${
+            isZoomed ? "scale-200 cursor-zoom-out" : "scale-100 cursor-zoom-in"
+          }`}
+          onClick={() => setIsZoomed(!isZoomed)}
         />
       ) : (
         <p className="text-red-400 text-sm">*Could not load the image</p>
