@@ -52,10 +52,10 @@ export function ContactCard({
       >
         <div className="rounded-full flex items-center">
           <img
-            className="rounded-full min-w-14 min-h-14"
+            className="rounded-full w-14 h-14"
             height={40}
             width={40}
-            src={`${conversation.participants[0]?.user.profilePicture ? conversation.participants[0]?.user.profilePicture : "/default_Profile.png"}`}
+            src={`${conversation.participants[0]?.user.profilePicture ? `https://res.cloudinary.com/dqungk1o5/image/upload/${conversation.participants[0]?.user.profilePicture}` : "/default_Profile.png"}`}
             alt="Profile-Picture"
           ></img>
         </div>
