@@ -5,7 +5,6 @@ import {
   conversationIdAtom,
   conversationsAtom,
   messagesAtom,
-  recepientIdAtom,
   socketAtom,
   userAtom,
 } from "../store/store"; // Import the atom

@@ -5,7 +5,7 @@ import {
   conversationIdAtom,
   conversationsAtom,
   LoadConvoAtom,
-  recepientIdAtom,
+  recipientAtom,
 } from "../store/store";
 import { ModifiedTimeAgo, timeAgo } from "../utils/date";
 import { ConversationType } from "../store/store";
@@ -18,13 +18,12 @@ export function ContactCard({
   const [loadConvo, setLoadConvo] = useAtom(LoadConvoAtom);
 
   const [conversationId, setConversationId] = useAtom(conversationIdAtom);
-  const [recepientId, setRecepientId] = useAtom(recepientIdAtom);
   const [conversations, setConversations] = useAtom(conversationsAtom);
+  const [recipient, setRecipient] = useAtom(recipientAtom);
 
   function clickHandler() {
     setLoadConvo(true);
     setConversationId(conversation.id);
-    setRecepientId(conversation.participants[0]?.user.id);
 
     const updatedConversations = conversations.map((convo) => {
       if (convo.id === conversation.id) {
@@ -32,6 +31,13 @@ export function ContactCard({
       }
 
       return convo;
+    });
+
+    setRecipient({
+      id: conversation.participants[0]?.user.id as string,
+      username: conversation.participants[0]?.user.username as string,
+      profilePicture: conversation.participants[0]?.user
+        .profilePicture as string,
     });
 
     setConversations(updatedConversations);

@@ -4,9 +4,9 @@ import {
   conversationIdAtom,
   messagesAtom,
   previewAtom,
-  recepientIdAtom,
   socketAtom,
   conversationsAtom,
+  recipientAtom,
 } from "../../store/store";
 import { getSession } from "next-auth/react";
 import { ConversationType } from "../../store/store";
@@ -36,12 +36,12 @@ export function useChatForm() {
     defaultValues: { message: "", image: null },
   });
 
-  const [conversationId] = useAtom(conversationIdAtom);
-  const [recipientId] = useAtom(recepientIdAtom);
+  const [conversationId, setConversationId] = useAtom(conversationIdAtom);
   const [messages, setMessages] = useAtom(messagesAtom);
   const [conversations, setConversations] = useAtom(conversationsAtom);
   const [socket] = useAtom(socketAtom);
   const [showPreview, setShowPreview] = useAtom(previewAtom);
+  const [recipient, setRecipient] = useAtom(recipientAtom);
 
   async function sendMessageHandler(data: {
     message: string;
@@ -51,7 +51,7 @@ export function useChatForm() {
       const session = await getSession();
       const request: SendMessageRequest = {
         userId: session?.user.userId as string,
-        recipientId: recipientId as string,
+        recipientId: recipient?.id as string,
         content: data.message,
         conversationId,
         type: "compose",
@@ -77,14 +77,53 @@ export function useChatForm() {
             request.attachmentUrl = public_Id;
 
             axios
-              .post("http://localhost:3000/api/sendmessage", request)
+              .post("http://localhost:3000/api/send-message", request)
               .then((resolve) => {
                 console.log("Message is Successfully Sent", resolve);
                 socket?.send("send-message", {
-                  recipientId: recipientId,
+                  recipientId: recipient?.id,
                   conversationId: conversationId,
-                  messageId: resolve.data.message,
+                  messageId: resolve.data.message.messageId,
                 });
+
+                if (!conversationId) {
+                  const newConversation: ConversationType = {
+                    id: resolve.data.message.conversationId,
+                    isGroup: false,
+                    participants: [
+                      {
+                        id: session?.user.userId as string,
+                        user: {
+                          id: recipient?.id as string,
+                          profilePicture: recipient?.profilePicture as string,
+                          username: recipient?.username as string,
+                        },
+                      },
+                    ],
+                    messages: [
+                      {
+                        content: data.message,
+                        createdAt: new Date(),
+                        messageType: "compose",
+                      },
+                    ],
+                    _count: { messages: 0 },
+                  };
+
+                  setConversations((prevState) => {
+                    return [...prevState, newConversation].sort((a, b) => {
+                      const dateA = a.messages[0]?.createdAt
+                        ? new Date(a.messages[0].createdAt).getTime()
+                        : 0;
+                      const dateB = b.messages[0]?.createdAt
+                        ? new Date(b.messages[0].createdAt).getTime()
+                        : 0;
+                      return dateB - dateA;
+                    });
+                  });
+
+                  setConversationId(resolve.data.message.conversationId);
+                }
               })
               .catch((reject) => {
                 console.log("An Error Occured While Sending the Message");
@@ -95,14 +134,51 @@ export function useChatForm() {
           });
       } else {
         axios
-          .post("http://localhost:3000/api/sendmessage", request)
+          .post("http://localhost:3000/api/send-message", request)
           .then((resolve) => {
             console.log("Message is Successfully Sent", resolve);
             socket?.send("send-message", {
-              recipientId: recipientId,
+              recipientId: recipient?.id,
               conversationId: conversationId,
-              messageId: resolve.data.message,
+              messageId: resolve.data.message.messageId,
             });
+
+            if (!conversationId) {
+              const newConversation: ConversationType = {
+                id: resolve.data.message.conversationId,
+                isGroup: false,
+                participants: [
+                  {
+                    id: session?.user.userId as string,
+                    user: {
+                      id: recipient?.id as string,
+                      profilePicture: recipient?.profilePicture as string,
+                      username: recipient?.username as string,
+                    },
+                  },
+                ],
+                messages: [
+                  {
+                    content: data.message,
+                    createdAt: new Date(),
+                    messageType: "compose",
+                  },
+                ],
+                _count: { messages: 0 },
+              };
+
+              setConversations((prevState) => {
+                return [...prevState, newConversation].sort((a, b) => {
+                  const dateA = a.messages[0]?.createdAt
+                    ? new Date(a.messages[0].createdAt).getTime()
+                    : 0;
+                  const dateB = b.messages[0]?.createdAt
+                    ? new Date(b.messages[0].createdAt).getTime()
+                    : 0;
+                  return dateB - dateA;
+                });
+              });
+            }
           })
           .catch((reject) => {
             console.log("An Error Occured While Sending the Message");
@@ -124,8 +200,10 @@ export function useChatForm() {
 
       // Update last message in conversations
       // client Side
-      const updatedConversations = conversations.map(
-        (convo: ConversationType) =>
+      let updatedConversations = [...conversations];
+
+      if (conversationId) {
+        updatedConversations = conversations.map((convo: ConversationType) =>
           convo.id === conversationId
             ? {
                 ...convo,
@@ -134,13 +212,25 @@ export function useChatForm() {
                     ...convo.messages[0],
                     content: data.message,
                     createdAt: new Date().toISOString(),
+                    messageType: "compose",
                   },
                 ],
               }
             : convo
-      );
+        ) as ConversationType[];
+      }
 
-      setConversations(updatedConversations as ConversationType[]);
+      const sortedConversations = [...updatedConversations].sort((a, b) => {
+        const dateA = a.messages[0]?.createdAt
+          ? new Date(a.messages[0].createdAt).getTime()
+          : 0;
+        const dateB = b.messages[0]?.createdAt
+          ? new Date(b.messages[0].createdAt).getTime()
+          : 0;
+        return dateB - dateA;
+      });
+
+      setConversations(sortedConversations as ConversationType[]);
       setValue("image", null, { shouldDirty: true });
       setShowPreview("");
 

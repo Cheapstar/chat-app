@@ -8,7 +8,7 @@ import {
   conversationsAtom,
   messagesAtom,
   previewAtom,
-  recepientIdAtom,
+  recipientAtom,
   socketAtom,
   userAtom,
 } from "../store/store";
@@ -24,18 +24,11 @@ import { RxCross1 } from "react-icons/rx";
 export function Convo() {
   const [messages, setMessages] = useAtom(messagesAtom);
   const [conversationId] = useAtom(conversationIdAtom);
-  const [recipientId] = useAtom(recepientIdAtom);
   const [user] = useAtom(userAtom);
   const [showPreview, setShowPreview] = useAtom(previewAtom);
   const [conversations] = useAtom(conversationsAtom);
 
-  const [recipient, setRecipient] = useState<{
-    name: string;
-    profilePic: string;
-  }>({
-    name: "",
-    profilePic: "",
-  });
+  const [recipient, setRecipient] = useAtom(recipientAtom);
 
   const scrollEle = useRef<HTMLDivElement>(null);
 
@@ -56,15 +49,6 @@ export function Convo() {
     }
     fetchMessages();
 
-    conversations.forEach((convo) => {
-      if (convo.id === conversationId) {
-        setRecipient({
-          profilePic: convo.participants[0]?.user.profilePicture as string,
-          name: convo.participants[0]?.user.username as string,
-        });
-      }
-    });
-
     // update the message status and notify that to the participant
 
     axios
@@ -75,7 +59,7 @@ export function Convo() {
         if (socket)
           socket.send("message-status-updated", {
             conversationId,
-            recipientId: recipientId,
+            recipientId: recipient?.id,
           });
       })
       .catch((reject) => {
@@ -103,11 +87,11 @@ export function Convo() {
         <div className="rounded-full flex items-center border-white border-1 shadow-2xl">
           <img
             className="rounded-full w-12 h-12 object-cover"
-            src={`${recipient.profilePic ? recipient.profilePic : "/default_Profile.png"}`}
+            src={`${recipient?.profilePicture ? recipient?.profilePicture : "/default_Profile.png"}`}
             alt="Profile-Picture"
           ></img>
         </div>
-        <div className="grow text-lg">{recipient.name}</div>
+        <div className="grow text-lg">{recipient?.username}</div>
       </div>
       <div className="flex flex-col h-[80%] gap-4 px-2 py-2 overflow-scroll hide-scroll">
         {messages.length > 0 ? (

@@ -1,6 +1,8 @@
 import { prisma } from "@repo/database";
 import { uploadImage, uploadImageToCloudinary } from "@repo/cloudinary";
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../../../lib/auth";
 
 interface SendMessageRequest {
   userId: string;
@@ -13,6 +15,18 @@ interface SendMessageRequest {
 
 export async function POST(request: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || !session.user.userId) {
+      return NextResponse.json(
+        {
+          error: "Invalid User/Bad request",
+        },
+        {
+          status: 404,
+        }
+      );
+    }
+
     const body: SendMessageRequest = await request.json();
     console.log("Request Body", body);
     const result = await sendMessage({ ...body });
@@ -54,7 +68,10 @@ export async function sendMessage({
         },
       });
 
-      return message.id;
+      return {
+        messageId: message.id,
+        conversationId: conversationId,
+      };
     } else {
       const conversation = await prisma.conversation.create({
         data: {
@@ -83,7 +100,10 @@ export async function sendMessage({
         },
       });
 
-      return message.id;
+      return {
+        messageId: message.id,
+        conversationId: conversation.id,
+      };
     }
   } catch (error) {
     console.log("Error while Submitting the Message from database", error);

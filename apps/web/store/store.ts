@@ -8,7 +8,7 @@ export const messagesAtom = atom<MessageType[]>([]);
 
 export const wantsToMessageAtom = atom<true | false>(false);
 
-export const recepientIdAtom = atom<string>();
+export const recipientAtom = atom<RecipientType>();
 
 //
 export const LoadConvoAtom = atom<true | false>(false);
@@ -66,4 +66,10 @@ export interface MessageType {
   status: string;
   messageType: string;
   attachmentUrl?: string;
+}
+
+export interface RecipientType {
+  id: string;
+  username: string;
+  profilePicture: string;
 }

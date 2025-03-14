@@ -1,11 +1,28 @@
 import { prisma } from "@repo/database";
 import { error } from "console";
+import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
+import { authOptions } from "../../../lib/auth";
 
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || !session.user.userId) {
+      return NextResponse.json(
+        {
+          error: "Invalid User/Bad request",
+        },
+        {
+          status: 404,
+        }
+      );
+    }
+
     const body = await req.json();
-    const result = await updateMessageStatus(body);
+    const result = await updateMessageStatus({
+      ...body,
+      senderId: session.user.userId,
+    });
 
     if (!result) {
       return NextResponse.json(
@@ -41,14 +58,17 @@ export async function POST(req: Request) {
 
 async function updateMessageStatus({
   conversationId,
+  senderId,
 }: {
   conversationId: string;
+  senderId: string;
 }) {
   try {
     const updateStatus = await prisma.messageStatus.updateMany({
       where: {
         message: {
           conversationId: conversationId,
+          senderId: { not: senderId },
         },
       },
       data: {
