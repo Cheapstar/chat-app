@@ -5,6 +5,7 @@ import {
   conversationIdAtom,
   conversationsAtom,
   LoadConvoAtom,
+  messagesAtom,
   recipientAtom,
 } from "../store/store";
 import { ModifiedTimeAgo, timeAgo } from "../utils/date";
@@ -20,10 +21,12 @@ export function ContactCard({
   const [conversationId, setConversationId] = useAtom(conversationIdAtom);
   const [conversations, setConversations] = useAtom(conversationsAtom);
   const [recipient, setRecipient] = useAtom(recipientAtom);
+  const [messages, setMessages] = useAtom(messagesAtom);
 
   function clickHandler() {
     setLoadConvo(true);
     setConversationId(conversation.id);
+    setMessages([]);
 
     const updatedConversations = conversations.map((convo) => {
       if (convo.id === conversation.id) {

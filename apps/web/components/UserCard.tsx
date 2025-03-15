@@ -45,7 +45,7 @@ export function UserCard({ user }: { user: User }) {
       <div className=" rounded-full flex items-center object-cover">
         <img
           className="rounded-full w-12 h-12"
-          src={`${user.profilePicture ? user.profilePicture : "/default_Profile.png"}`}
+          src={`${user.profilePicture ? `https://res.cloudinary.com/dqungk1o5/image/upload/${user.profilePicture}` : "/default_Profile.png"}`}
           alt="Profile-Picture"
         ></img>
       </div>

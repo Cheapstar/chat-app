@@ -82,7 +82,7 @@ export function useChatForm() {
                 console.log("Message is Successfully Sent", resolve);
                 socket?.send("send-message", {
                   recipientId: recipient?.id,
-                  conversationId: conversationId,
+                  conversationId: resolve.data.message.conversationId,
                   messageId: resolve.data.message.messageId,
                 });
 
@@ -139,11 +139,12 @@ export function useChatForm() {
             console.log("Message is Successfully Sent", resolve);
             socket?.send("send-message", {
               recipientId: recipient?.id,
-              conversationId: conversationId,
+              conversationId: resolve.data.message.conversationId,
               messageId: resolve.data.message.messageId,
             });
 
             if (!conversationId) {
+              console.log("User Does not Exists so sending");
               const newConversation: ConversationType = {
                 id: resolve.data.message.conversationId,
                 isGroup: false,
@@ -178,6 +179,8 @@ export function useChatForm() {
                   return dateB - dateA;
                 });
               });
+
+              setConversationId(resolve.data.message.conversationId);
             }
           })
           .catch((reject) => {
@@ -200,6 +203,7 @@ export function useChatForm() {
 
       // Update last message in conversations
       // client Side
+
       let updatedConversations = [...conversations];
 
       if (conversationId) {

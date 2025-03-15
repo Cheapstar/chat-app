@@ -1,9 +1,11 @@
 {
   "name": "@repo/database",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "./src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "start": "node dist/index.js"
   },
   "keywords": [],
   "author": "",
@@ -14,6 +16,6 @@
     "@prisma/client": "^6.3.0"
   },
   "exports": {
-    ".":"./dist/index.js"
-  } 
+    ".": "./dist/index.js"
+  }
 }

@@ -20,6 +20,8 @@ import { LiaCheckDoubleSolid } from "react-icons/lia";
 import { MessageType } from "../store/store";
 import axios from "axios";
 import { RxCross1 } from "react-icons/rx";
+import { isSameDay, ModifiedTimeAgoForMessages } from "../utils/date";
+import React from "react";
 
 export function Convo() {
   const [messages, setMessages] = useAtom(messagesAtom);
@@ -27,54 +29,147 @@ export function Convo() {
   const [user] = useAtom(userAtom);
   const [showPreview, setShowPreview] = useAtom(previewAtom);
   const [conversations] = useAtom(conversationsAtom);
+  const [isLoading, setIsLoading] = useState(false);
 
   const [recipient, setRecipient] = useAtom(recipientAtom);
 
   const scrollEle = useRef<HTMLDivElement>(null);
 
+  // For Rendering the date Flag
+  const messageDateRef = useRef<Date>(new Date(0));
+
+  // For Fetching messages as per request
+  const lastMessageDateRef = useRef<Date>(new Date());
+
+  // For loading messages on scroll
+  const messageContainerRef = useRef<HTMLDivElement>(null);
+
+  const [initialLoad, setInitialLoad] = useState<boolean>(true);
+
   const [socket] = useAtom(socketAtom);
 
   useEffect(() => {
+    let initialLoad = true;
+
     async function fetchMessages() {
       try {
-        if (!conversationId) {
+        if (!conversationId || isLoading) {
           return;
         }
-        const result = await getMessages({ conversationId });
-        console.log(result);
-        setMessages(result as MessageType[]);
+
+        setIsLoading(true);
+
+        // Save current scroll height before fetching new messages
+        const scrollHeightBeforeFetch =
+          messageContainerRef.current?.scrollHeight || 0;
+
+        const response = await getMessages({
+          conversationId,
+          lastFetchedDate: lastMessageDateRef.current,
+        });
+
+        if (response && response.length > 0) {
+          // Fix the sorting function to properly compare dates
+          const result = response?.sort((a, b) => {
+            return (
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            );
+          });
+
+          lastMessageDateRef.current = result[0]?.createdAt as Date;
+
+          // Make sure each message has a unique identifier
+          setMessages((prevState) => {
+            // Create a new array with unique messages only (based on some ID)
+            const uniqueMessages = [...response, ...prevState] as MessageType[];
+            const seen = new Set();
+            return uniqueMessages.filter((msg) => {
+              const duplicate = seen.has(msg.id);
+              seen.add(msg.id);
+              return !duplicate;
+            });
+          });
+
+          // Small delay to ensure DOM updates
+          setTimeout(() => {
+            if (messageContainerRef.current) {
+              if (initialLoad) {
+                // On initial load, scroll to bottom
+                messageContainerRef.current.scrollTop =
+                  messageContainerRef.current.scrollHeight;
+                initialLoad = false;
+              } else {
+                // When loading older messages, maintain scroll position
+                const newScrollHeight =
+                  messageContainerRef.current.scrollHeight;
+                const heightDifference =
+                  newScrollHeight - scrollHeightBeforeFetch;
+                messageContainerRef.current.scrollTop = heightDifference;
+              }
+            }
+            setIsLoading(false);
+          }, 50);
+        } else {
+          setIsLoading(false);
+        }
       } catch (err) {
         console.log("Error while fetching the Messages", err);
+        setIsLoading(false);
       }
     }
+
+    // Initial fetch
     fetchMessages();
 
-    // update the message status and notify that to the participant
+    // Debounce the scroll handler to prevent multiple fetches
+    let scrollTimeout: NodeJS.Timeout | null = null;
 
-    axios
-      .post("http://localhost:3000/api/update-message-status", {
-        conversationId,
-      })
-      .then((response) => {
-        if (socket)
-          socket.send("message-status-updated", {
-            conversationId,
-            recipientId: recipient?.id,
-          });
-      })
-      .catch((reject) => {
-        console.log("Could not update the Message Status");
-      });
+    function loadMessages(event: Event) {
+      const target = event.currentTarget as HTMLDivElement;
+      if (target.scrollTop === 0 && !isLoading) {
+        if (scrollTimeout) clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+          fetchMessages();
+        }, 300);
+      }
+    }
 
-    // messages has been read
-    // yaha se conversation Id jaegi then wo saari ki saari message status update honge
-    // then return to recepient as per the Id and then send request to him
-    // if he has the conversation open then messages update honge to read
+    if (messageContainerRef.current) {
+      messageContainerRef.current.addEventListener("scroll", loadMessages);
+    }
+
+    return () => {
+      if (messageContainerRef.current) {
+        lastMessageDateRef.current = new Date();
+        messageDateRef.current = new Date(0);
+        messageContainerRef.current.removeEventListener("scroll", loadMessages);
+      }
+      if (scrollTimeout) clearTimeout(scrollTimeout);
+    };
+  }, [conversationId]);
+
+  useEffect(() => {
+    if (conversationId) {
+      axios
+        .post("http://localhost:3000/api/update-message-status", {
+          conversationId,
+        })
+        .then((response) => {
+          if (socket)
+            socket.send("message-status-updated", {
+              conversationId,
+              recipientId: recipient?.id,
+            });
+        })
+        .catch((reject) => {
+          console.log("Could not update the Message Status");
+        });
+    }
   }, [conversationId]);
 
   useEffect(() => {
     if (scrollEle.current) {
-      scrollEle.current.scrollIntoView({ behavior: "auto" });
+      // scrollEle.current.scrollIntoView({ behavior: "auto" });
     }
   }, [messages]);
 
@@ -87,31 +182,59 @@ export function Convo() {
         <div className="rounded-full flex items-center border-white border-1 shadow-2xl">
           <img
             className="rounded-full w-12 h-12 object-cover"
-            src={`${recipient?.profilePicture ? recipient?.profilePicture : "/default_Profile.png"}`}
+            src={`${recipient?.profilePicture ? `https://res.cloudinary.com/dqungk1o5/image/upload/${recipient?.profilePicture}` : "/default_Profile.png"}`}
             alt="Profile-Picture"
           ></img>
         </div>
         <div className="grow text-lg">{recipient?.username}</div>
       </div>
-      <div className="flex flex-col h-[80%] gap-4 px-2 py-2 overflow-scroll hide-scroll">
+      <div
+        className="flex flex-col h-[80%] gap-4 px-2 py-2 overflow-scroll hide-scroll"
+        ref={messageContainerRef}
+      >
+        {isLoading && (
+          <div className="flex justify-center">
+            <p className="bg-gray-300 text-gray-600 text-sm rounded-md px-2.5 py-1.5">
+              Loading messages...
+            </p>
+          </div>
+        )}
+
         {messages.length > 0 ? (
-          messages.map((message) => (
-            <motion.div
-              key={message.id}
-              initial={{
-                scale: 0.4,
-                opacity: 0.8,
-                x: 100,
-              }}
-              animate={{
-                scale: 1,
-                opacity: 1,
-                x: 0,
-              }}
-            >
-              <Message message={message}></Message>
-            </motion.div>
-          ))
+          messages.map((message) => {
+            // Check if we should render a date Flag
+            let shouldRenderFlag = false;
+
+            console.log("Date is ", messageDateRef);
+            if (messageDateRef.current === null) {
+              shouldRenderFlag = false;
+              messageDateRef.current = new Date(message.createdAt);
+            } else {
+              shouldRenderFlag = isSameDay(
+                new Date(message.createdAt),
+                messageDateRef.current
+              );
+
+              if (!shouldRenderFlag) {
+                messageDateRef.current = new Date(message.createdAt);
+              }
+            }
+
+            return (
+              <React.Fragment key={message.id}>
+                {!shouldRenderFlag && (
+                  <motion.div className="flex justify-center">
+                    <p className="bg-gray-300 text-gray-600 text-sm rounded-md px-2.5 py-1.5">
+                      {ModifiedTimeAgoForMessages(new Date(message.createdAt))}
+                    </p>
+                  </motion.div>
+                )}
+                <motion.div>
+                  <Message message={message}></Message>
+                </motion.div>
+              </React.Fragment>
+            );
+          })
         ) : (
           <p className="text-center text-gray-600">No messages yet.</p>
         )}

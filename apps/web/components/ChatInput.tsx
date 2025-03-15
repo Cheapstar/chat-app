@@ -76,7 +76,7 @@ export function ChatInput() {
       </button>
 
       <input
-        className="grow border-1 border-gray-200 shadow-2xs px-3 py-2 rounded-xl bg-white"
+        className="grow border-1 border-gray-200 shadow-2xs px-3 py-2 rounded-xl bg-white outline-none"
         placeholder="Enter Message"
         {...register("message")}
       ></input>
