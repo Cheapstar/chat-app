@@ -131,7 +131,7 @@ export function Settings() {
   const profilePictureUrl =
     updatedProfilePicture ||
     (profilePicture
-      ? `https://res.cloudinary.com/dqungk1o5/image/upload/${profilePicture}`
+      ? `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${profilePicture}`
       : "/default_Profile.png");
 
   return (

@@ -182,7 +182,7 @@ export function Convo() {
         <div className="rounded-full flex items-center border-white border-1 shadow-2xl">
           <img
             className="rounded-full w-12 h-12 object-cover"
-            src={`${recipient?.profilePicture ? `https://res.cloudinary.com/dqungk1o5/image/upload/${recipient?.profilePicture}` : "/default_Profile.png"}`}
+            src={`${recipient?.profilePicture ? `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${recipient?.profilePicture}` : "/default_Profile.png"}`}
             alt="Profile-Picture"
           ></img>
         </div>
@@ -273,7 +273,7 @@ export function Message({ message }: { message: MessageType }) {
   const fromServer = message.attachmentUrl?.includes("chat-app");
   let imgUrl = "";
   if (fromServer) {
-    imgUrl = `https://res.cloudinary.com/dqungk1o5/image/upload/${message.attachmentUrl}`;
+    imgUrl = `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${message.attachmentUrl}`;
   } else {
     imgUrl = message.attachmentUrl as string;
   }
