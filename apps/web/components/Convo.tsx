@@ -22,6 +22,7 @@ import axios from "axios";
 import { RxCross1 } from "react-icons/rx";
 import { isSameDay, ModifiedTimeAgoForMessages } from "../utils/date";
 import React from "react";
+import { ImSpinner9 } from "react-icons/im";
 
 export function Convo() {
   const [messages, setMessages] = useAtom(messagesAtom);
@@ -30,13 +31,11 @@ export function Convo() {
   const [showPreview, setShowPreview] = useAtom(previewAtom);
   const [conversations] = useAtom(conversationsAtom);
   const [isLoading, setIsLoading] = useState(false);
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
 
   const [recipient, setRecipient] = useAtom(recipientAtom);
 
   const scrollEle = useRef<HTMLDivElement>(null);
-
-  // For Rendering the date Flag
-  const messageDateRef = useRef<Date>(new Date(0));
 
   // For Fetching messages as per request
   const lastMessageDateRef = useRef<Date>(new Date());
@@ -44,13 +43,13 @@ export function Convo() {
   // For loading messages on scroll
   const messageContainerRef = useRef<HTMLDivElement>(null);
 
-  const [initialLoad, setInitialLoad] = useState<boolean>(true);
-
   const [socket] = useAtom(socketAtom);
 
-  useEffect(() => {
-    let initialLoad = true;
+  // Store the last scroll position
+  const previousScrollHeightRef = useRef(0);
+  const scrollPositionRef = useRef(0);
 
+  useEffect(() => {
     async function fetchMessages() {
       try {
         if (!conversationId || isLoading) {
@@ -59,9 +58,12 @@ export function Convo() {
 
         setIsLoading(true);
 
-        // Save current scroll height before fetching new messages
-        const scrollHeightBeforeFetch =
-          messageContainerRef.current?.scrollHeight || 0;
+        // Save the current scroll position and height
+        if (messageContainerRef.current) {
+          previousScrollHeightRef.current =
+            messageContainerRef.current.scrollHeight;
+          scrollPositionRef.current = messageContainerRef.current.scrollTop;
+        }
 
         const response = await getMessages({
           conversationId,
@@ -69,7 +71,6 @@ export function Convo() {
         });
 
         if (response && response.length > 0) {
-          // Fix the sorting function to properly compare dates
           const result = response?.sort((a, b) => {
             return (
               new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
@@ -77,6 +78,8 @@ export function Convo() {
           });
 
           lastMessageDateRef.current = result[0]?.createdAt as Date;
+
+          await new Promise((resolve) => setTimeout(resolve, 500));
 
           // Make sure each message has a unique identifier
           setMessages((prevState) => {
@@ -90,25 +93,17 @@ export function Convo() {
             });
           });
 
-          // Small delay to ensure DOM updates
+          // Maintain scroll position after loading older messages
           setTimeout(() => {
             if (messageContainerRef.current) {
-              if (initialLoad) {
-                // On initial load, scroll to bottom
-                messageContainerRef.current.scrollTop =
-                  messageContainerRef.current.scrollHeight;
-                initialLoad = false;
-              } else {
-                // When loading older messages, maintain scroll position
-                const newScrollHeight =
-                  messageContainerRef.current.scrollHeight;
-                const heightDifference =
-                  newScrollHeight - scrollHeightBeforeFetch;
-                messageContainerRef.current.scrollTop = heightDifference;
-              }
+              const newScrollHeight = messageContainerRef.current.scrollHeight;
+              const heightDifference =
+                newScrollHeight - previousScrollHeightRef.current;
+              messageContainerRef.current.scrollTop =
+                scrollPositionRef.current + heightDifference;
             }
             setIsLoading(false);
-          }, 50);
+          }, 200);
         } else {
           setIsLoading(false);
         }
@@ -132,6 +127,11 @@ export function Convo() {
           fetchMessages();
         }, 300);
       }
+
+      // Detect if user has scrolled up (away from bottom)
+      const isAtBottom =
+        target.scrollHeight - target.scrollTop <= target.clientHeight + 50;
+      setShouldScrollToBottom(isAtBottom);
     }
 
     if (messageContainerRef.current) {
@@ -141,7 +141,7 @@ export function Convo() {
     return () => {
       if (messageContainerRef.current) {
         lastMessageDateRef.current = new Date();
-        messageDateRef.current = new Date(0);
+
         messageContainerRef.current.removeEventListener("scroll", loadMessages);
       }
       if (scrollTimeout) clearTimeout(scrollTimeout);
@@ -168,10 +168,11 @@ export function Convo() {
   }, [conversationId]);
 
   useEffect(() => {
-    if (scrollEle.current) {
-      // scrollEle.current.scrollIntoView({ behavior: "auto" });
+    // Only scroll to bottom if user hasn't scrolled up or if it's the initial load
+    if (shouldScrollToBottom && scrollEle.current) {
+      scrollEle.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages]);
+  }, [messages, shouldScrollToBottom]);
 
   return (
     <div className="bg-sky-300 h-[100%] w-full rounded-r-md relative z-50">
@@ -189,52 +190,65 @@ export function Convo() {
         <div className="grow text-lg">{recipient?.username}</div>
       </div>
       <div
-        className="flex flex-col h-[80%] gap-4 px-2 py-2 overflow-scroll hide-scroll"
+        className="flex flex-col h-[80%] gap-4 px-2 py-2 overflow-auto relative"
         ref={messageContainerRef}
       >
         {isLoading && (
-          <div className="flex justify-center">
-            <p className="bg-gray-300 text-gray-600 text-sm rounded-md px-2.5 py-1.5">
-              Loading messages...
-            </p>
+          <div className="flex justify-center absolute top-auto">
+            <ImSpinner9 className="animate-spin text-lg text-white" />
           </div>
         )}
 
         {messages.length > 0 ? (
-          messages.map((message) => {
-            // Check if we should render a date Flag
-            let shouldRenderFlag = false;
-
-            console.log("Date is ", messageDateRef);
-            if (messageDateRef.current === null) {
-              shouldRenderFlag = false;
-              messageDateRef.current = new Date(message.createdAt);
-            } else {
-              shouldRenderFlag = isSameDay(
-                new Date(message.createdAt),
-                messageDateRef.current
+          messages.map((message, index) => {
+            // Check if this is the first message or a new day compared to previous message
+            const currentMessageDate = new Date(message.createdAt);
+            const shouldRenderFlag =
+              index === 0 ||
+              !isSameDay(
+                currentMessageDate,
+                new Date((messages[index - 1] as MessageType).createdAt)
               );
-
-              if (!shouldRenderFlag) {
-                messageDateRef.current = new Date(message.createdAt);
-              }
-            }
 
             return (
               <React.Fragment key={message.id}>
-                {!shouldRenderFlag && (
-                  <motion.div className="flex justify-center">
+                {shouldRenderFlag && (
+                  <motion.div
+                    className="flex justify-center"
+                    initial={{
+                      scale: 0.8,
+                      opacity: 0.8,
+                    }}
+                    animate={{
+                      scale: 1,
+                      opacity: 1,
+                    }}
+                  >
                     <p className="bg-gray-300 text-gray-600 text-sm rounded-md px-2.5 py-1.5">
-                      {ModifiedTimeAgoForMessages(new Date(message.createdAt))}
+                      {ModifiedTimeAgoForMessages(currentMessageDate)}
                     </p>
                   </motion.div>
                 )}
-                <motion.div>
+                <motion.div
+                  key={message.id}
+                  initial={{
+                    scale: 0.4,
+                    opacity: 0.8,
+                    x: 100,
+                  }}
+                  animate={{
+                    scale: 1,
+                    opacity: 1,
+                    x: 0,
+                  }}
+                >
                   <Message message={message}></Message>
                 </motion.div>
               </React.Fragment>
             );
           })
+        ) : isLoading ? (
+          ""
         ) : (
           <p className="text-center text-gray-600">No messages yet.</p>
         )}

@@ -25,7 +25,7 @@ export function ListOfContacts() {
         return (
           <div
             key={conversation?.id}
-            className="flex flex-col"
+            className="flex flex-col hover:bg-gray-200"
           >
             <hr className="w-[80%] text-gray-400 self-end"></hr>
             <motion.div

@@ -24,27 +24,28 @@ export function ContactCard({
   const [messages, setMessages] = useAtom(messagesAtom);
 
   function clickHandler() {
-    setLoadConvo(true);
-    setConversationId(conversation.id);
-    setMessages([]);
+    if (conversation.id != conversationId) {
+      setConversationId(conversation.id);
+      setLoadConvo(true);
+      setMessages([]);
+      const updatedConversations = conversations.map((convo) => {
+        if (convo.id === conversation.id) {
+          convo._count.messages = 0;
+        }
 
-    const updatedConversations = conversations.map((convo) => {
-      if (convo.id === conversation.id) {
-        convo._count.messages = 0;
-      }
+        return convo;
+      });
 
-      return convo;
-    });
+      setRecipient({
+        id: conversation.participants[0]?.user.id as string,
+        username: conversation.participants[0]?.user.username as string,
+        profilePicture: conversation.participants[0]?.user
+          .profilePicture as string,
+      });
 
-    setRecipient({
-      id: conversation.participants[0]?.user.id as string,
-      username: conversation.participants[0]?.user.username as string,
-      profilePicture: conversation.participants[0]?.user
-        .profilePicture as string,
-    });
-
-    setConversations(updatedConversations);
-    console.log("ConversationId from ContactCard", conversation.id);
+      setConversations(updatedConversations);
+      console.log("ConversationId from ContactCard", conversation.id);
+    }
   }
 
   return (

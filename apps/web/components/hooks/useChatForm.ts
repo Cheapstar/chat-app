@@ -180,6 +180,7 @@ export function useChatForm() {
                 });
               });
 
+              // This causes the rerender of convo component causing double messages
               setConversationId(resolve.data.message.conversationId);
             }
           })
@@ -188,18 +189,20 @@ export function useChatForm() {
           });
       }
 
-      setMessages([
-        ...messages,
-        {
-          id: crypto.randomUUID(),
-          sender: true,
-          content: data.message,
-          createdAt: new Date(),
-          status: "",
-          messageType: "compose",
-          attachmentUrl: showPreview,
-        },
-      ]);
+      if (conversationId) {
+        setMessages([
+          ...messages,
+          {
+            id: crypto.randomUUID(),
+            sender: true,
+            content: data.message,
+            createdAt: new Date(),
+            status: "",
+            messageType: "compose",
+            attachmentUrl: showPreview,
+          },
+        ]);
+      }
 
       // Update last message in conversations
       // client Side

@@ -161,7 +161,7 @@ export function ChatApp() {
                       messageType: "compose",
                     },
                   ],
-                  _count: { messages: 0 },
+                  _count: { messages: 1 },
                 };
 
                 setConversations((prevState) => {
@@ -239,9 +239,13 @@ export function ChatApp() {
 
   return (
     <div className="bg-white h-[100%] shadow-2xs border-1 border-gray-200 rounded-sm flex rounded-r-md">
-      <div className="flex flex-col gap-2 pr-2 border-r-1 border-gray-200 min-w-[30%] z-20 overflow-scroll hide-scroll">
-        <div className="bg-white text-4xl px-6 py-4 text-sky-700">Chats</div>
-        <ListOfContacts />
+      <div className="flex flex-col  min-w-[30%]">
+        <div className="bg-white text-4xl px-6 py-4 text-sky-700 sticky top-0 z-30">
+          Chats
+        </div>
+        <div className="flex flex-col pr-2 border-r-1 border-gray-200z-20 overflow-auto">
+          <ListOfContacts />
+        </div>
       </div>
       {loadConvo && <Convo />}
     </div>
