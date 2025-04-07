@@ -29,7 +29,11 @@ export async function POST(req: Request) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const upload = await uploadImageToCloudinary(buffer);
+    const upload = await uploadImageToCloudinary(buffer, {
+      apiKey: process.env.CLOUDINARY_API_KEY!,
+      apiSecret: process.env.CLOUDINARY_API_SECRET!,
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME!,
+    });
 
     return NextResponse.json({ public_Id: upload }, { status: 200 });
   } catch (error) {

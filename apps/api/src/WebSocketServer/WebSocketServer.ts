@@ -1,5 +1,11 @@
 import WebSocket, { WebSocketServer } from "ws";
 import { Server as HTTPServer } from "http";
+import {
+  ConversationType,
+  SendMessagePayload,
+  UpdateMessageStatusPayload,
+} from "../types.js";
+import { prisma } from "@repo/database";
 
 // Each Request must come with the userId of the client
 // structure of the request {
@@ -113,26 +119,127 @@ export class WebSocketClient {
   initWs = (userId: string) => {
     this.on("send-message", this.sendMessageHandler, userId);
     this.on("message-status-updated", this.updateMessageStatusHandler, userId);
+    this.on("new-group-created", this.groupCreationHandler, userId);
   };
 
-  sendMessageHandler = ({ userId, payload }: Args) => {
-    const { conversationId, recipientId, messageId }: SendMessage = payload;
+  sendMessageHandler = ({ userId: senderId, payload }: Args) => {
+    const { message }: SendMessagePayload = payload;
 
-    this.send(recipientId, "new-message", {
-      conversationId,
-      senderId: userId,
-      messageId,
-    });
+    /* Fetch the recipients of the conversation and then 
+        if online => notify the client,
+        else move on 
+    */
+
+    prisma.conversation
+      .findFirst({
+        where: {
+          id: message.conversationId,
+        },
+        select: {
+          participants: {
+            where: {
+              userId: { not: senderId },
+            },
+            select: {
+              userId: true,
+            },
+          },
+        },
+      })
+      .then((resolve) => {
+        if (!resolve) throw new Error("Couldn't fetch the participants");
+        const recipients = resolve.participants;
+
+        for (const recipient of recipients) {
+          this.send(recipient.userId, "new-message", {
+            message,
+            senderId,
+          });
+        }
+      });
   };
 
-  updateMessageStatusHandler = ({ userId, payload }: Args) => {
-    const { conversationId, recipientId, messageId } = payload;
+  updateMessageStatusHandler = ({ userId: senderId, payload }: Args) => {
+    const { conversationId }: UpdateMessageStatusPayload = payload;
+    prisma.conversation
+      .findFirst({
+        where: {
+          id: conversationId,
+        },
+        select: {
+          participants: {
+            where: {
+              userId: { not: senderId },
+            },
+            select: {
+              userId: true,
+            },
+          },
+        },
+      })
+      .then((resolve) => {
+        if (!resolve) throw new Error("Couldn't fetch the participants");
+        const recipients = resolve.participants;
 
-    this.send(recipientId, "update-message-status", {
-      conversationId,
-      messageId,
-      recipientId,
-    });
+        for (const recipient of recipients) {
+          this.send(recipient.userId, "update-message-status", {
+            conversationId,
+            userId: senderId,
+          });
+        }
+      });
+  };
+
+  groupCreationHandler = ({ userId: adminId, payload }: Args) => {
+    const { conversation, admin }: GroupCreationPayload = payload;
+
+    // send the conversation to the member apart from the admin
+    // we also need to update the conversation object , remove the recipient Participant and adding the admin
+    // fetch the admin details from database or get the details fromm the admin itself in payload
+
+    prisma.conversation
+      .findFirst({
+        where: {
+          id: conversation.id,
+        },
+        select: {
+          participants: {
+            where: {
+              userId: { not: adminId },
+            },
+            select: {
+              userId: true,
+            },
+          },
+        },
+      })
+      .then((resolve) => {
+        if (!resolve) throw new Error("Couldn't fetch the participants");
+        const recipients = resolve.participants;
+
+        for (const recipient of recipients) {
+          const updatedConversation: ConversationType = {
+            ...conversation,
+            participants: [
+              ...conversation.participants.filter((participant) => {
+                return recipient.userId != participant.user.id;
+              }),
+              {
+                id: `${conversation.id}`, // or a UUID if you're using those
+                user: {
+                  id: admin.id,
+                  username: admin.username,
+                  profilePicture: admin.profilePicture,
+                },
+              },
+            ],
+          };
+
+          this.send(recipient.userId, "added-to-group", {
+            conversation: updatedConversation,
+          });
+        }
+      });
   };
 }
 
@@ -140,6 +247,15 @@ type Args = {
   userId: string;
   payload?: any;
 };
+
+interface GroupCreationPayload {
+  conversation: ConversationType;
+  admin: {
+    id: string;
+    profilePicture: string;
+    username: string;
+  };
+}
 
 interface handlerFn {
   ({
@@ -149,10 +265,4 @@ interface handlerFn {
     userId: string;
     payload?: any;
   }): Promise<void> | void;
-}
-
-interface SendMessage {
-  recipientId: string;
-  conversationId: string;
-  messageId: string;
 }

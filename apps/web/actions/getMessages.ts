@@ -2,6 +2,14 @@
 import { prisma } from "@repo/database";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../lib/auth";
+import { MessageType, ServerActionResponseType } from "../types/types";
+
+interface ServerActionMessages extends ServerActionResponseType {
+  data: {
+    messages?: MessageType[];
+    error?: string;
+  };
+}
 
 export async function getMessages({
   conversationId,
@@ -9,11 +17,12 @@ export async function getMessages({
 }: {
   conversationId: string;
   lastFetchedDate: Date;
-}) {
+}): Promise<ServerActionMessages> {
+  console.log("Fetching the messages");
   const session = await getServerSession(authOptions);
 
   try {
-    const result = await prisma.conversation.findFirst({
+    const response = await prisma.conversation.findFirst({
       where: {
         id: conversationId,
       },
@@ -35,9 +44,16 @@ export async function getMessages({
             createdAt: true,
             messageType: true,
             attachmentUrl: true,
+            conversationId: true,
             statusUpdates: {
               select: {
                 status: true,
+                userId: true,
+              },
+            },
+            sender: {
+              select: {
+                username: true,
               },
             },
           },
@@ -46,33 +62,28 @@ export async function getMessages({
       },
     });
 
-    if (result) {
-      const messages = result?.messages?.map(
-        ({
-          id,
-          createdAt,
-          senderId,
-          content,
-          statusUpdates,
-          messageType,
-          attachmentUrl,
-        }) => {
-          return {
-            id,
-            createdAt,
-            sender: senderId === session?.user.userId,
-            content,
-            status: statusUpdates[0]?.status,
-            messageType,
-            attachmentUrl,
-          };
-        }
-      );
-      return messages;
+    if (!response) {
+      throw new Error("Could not fetch the messages , Please Try Again");
     }
 
-    return [];
+    const result = response.messages.map((message) => ({
+      ...message,
+      isSender: session?.user.userId === message.senderId,
+    }));
+
+    return {
+      success: true,
+      data: {
+        messages: result,
+      },
+    };
   } catch (err) {
     console.log("Error While fetching the Messages");
+    return {
+      success: false,
+      data: {
+        error: "Error while fetching the messages",
+      },
+    };
   }
 }

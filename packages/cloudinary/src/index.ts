@@ -43,8 +43,17 @@ function getPublicId(url: string = ""): string {
   return publicId;
 }
 
-export async function uploadImageToCloudinary(buffer: Buffer) {
+export async function uploadImageToCloudinary(
+  buffer: Buffer,
+  config: { apiKey: string; apiSecret: string; cloudName: string }
+) {
   try {
+    cloudinary.config({
+      cloud_name: config.cloudName,
+      api_key: config.apiKey,
+      api_secret: config.apiSecret,
+    });
+
     const result = await new Promise<UploadApiResponse>((resolve, reject) => {
       const uploadStream = cloudinary.uploader
         .upload_stream({ folder: "chat-app" }, (error, result) => {

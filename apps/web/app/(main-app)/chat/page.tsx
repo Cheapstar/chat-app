@@ -1,4 +1,5 @@
 import { ChatApp } from "../../../components/ChatApp";
+import { CreateGroupModal } from "../../../components/CreateGroupModal";
 import { SideBar } from "../../../components/SideBar";
 
 export default function Page() {
@@ -8,6 +9,7 @@ export default function Page() {
       <div className="grow">
         <ChatApp></ChatApp>
       </div>
+      <CreateGroupModal></CreateGroupModal>
     </div>
   );
 }

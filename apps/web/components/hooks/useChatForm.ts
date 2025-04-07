@@ -6,21 +6,27 @@ import {
   previewAtom,
   socketAtom,
   conversationsAtom,
-  recipientAtom,
+  selectedConversationAtom,
 } from "../../store/store";
 import { getSession } from "next-auth/react";
-import { ConversationType } from "../../store/store";
-import { read } from "fs";
 
-import axios from "axios";
+import axios, { AxiosResponse } from "axios";
+import { SendMessageResponse } from "../../app/api/send-message/route";
+import { ConversationType, MessageType } from "../../types/types";
+import { playSound } from "./sound";
 
 interface SendMessageRequest {
+  genMessageId: string;
   userId: string;
   recipientId: string;
   content: string;
   type: string;
   conversationId: string;
   attachmentUrl?: string;
+}
+
+export interface SendMessage {
+  message: MessageType;
 }
 
 export function useChatForm() {
@@ -41,7 +47,10 @@ export function useChatForm() {
   const [conversations, setConversations] = useAtom(conversationsAtom);
   const [socket] = useAtom(socketAtom);
   const [showPreview, setShowPreview] = useAtom(previewAtom);
-  const [recipient, setRecipient] = useAtom(recipientAtom);
+
+  const [selectedConversation, setSelectedConversation] = useAtom(
+    selectedConversationAtom
+  );
 
   async function sendMessageHandler(data: {
     message: string;
@@ -49,7 +58,13 @@ export function useChatForm() {
   }) {
     try {
       const session = await getSession();
+      const generatedId = crypto.randomUUID();
+
+      const recipient = selectedConversation?.participants[0]?.user;
+
+      // Request to backend for updating the DB
       const request: SendMessageRequest = {
+        genMessageId: generatedId,
         userId: session?.user.userId as string,
         recipientId: recipient?.id as string,
         content: data.message,
@@ -57,14 +72,19 @@ export function useChatForm() {
         type: "compose",
       };
 
+      // If message includes the image
       if (data.image && data.image.length > 0) {
         // required file
 
-        console.log("File is ", data.image[0]);
+        // console.log("File is ", data.image[0]);
         const file = data.image[0] as File;
         const formData = new FormData();
         formData.append("file", file);
-        console.log("Form Data", [...formData.entries()]);
+        // console.log("Form Data", [...formData.entries()]);
+
+        // Since file ko ham serialize nahi kar sakte toh alag se bhejni padegi then update karni padegi
+        // This will save the image in the store and returns the publicId
+        // which will be stored in the DB
         axios
           .post("http://localhost:3000/api/upload-image", formData, {
             headers: {
@@ -72,23 +92,31 @@ export function useChatForm() {
             },
           })
           .then((resolve) => {
-            console.log("Public Id is ", resolve);
+            // console.log("Public Id is ", resolve);
             const public_Id = resolve.data.public_Id;
             request.attachmentUrl = public_Id;
 
+            // Send Message with publicId
+
             axios
               .post("http://localhost:3000/api/send-message", request)
-              .then((resolve) => {
-                console.log("Message is Successfully Sent", resolve);
-                socket?.send("send-message", {
-                  recipientId: recipient?.id,
-                  conversationId: resolve.data.message.conversationId,
-                  messageId: resolve.data.message.messageId,
-                });
+              .then((resolve: AxiosResponse<any, SendMessageResponse>) => {
+                // console.log("Message is Successfully Sent", resolve);
+                // Notify the recipient about the new Message
+                const sentMessage: MessageType = resolve.data.data.message;
 
+                console.log("Send Message is", resolve);
+
+                console.log("Message is Successfully Sent", sentMessage);
+                socket?.send("send-message", {
+                  message: sentMessage,
+                } as SendMessage);
+
+                // If this the new Conversation and then hume client side ui bhi update karna Padega
+                // This path will not be taken in the group chat's case
                 if (!conversationId) {
                   const newConversation: ConversationType = {
-                    id: resolve.data.message.conversationId,
+                    id: sentMessage.conversationId,
                     isGroup: false,
                     participants: [
                       {
@@ -102,7 +130,7 @@ export function useChatForm() {
                     ],
                     messages: [
                       {
-                        content: data.message,
+                        content: sentMessage.content,
                         createdAt: new Date(),
                         messageType: "compose",
                       },
@@ -122,8 +150,26 @@ export function useChatForm() {
                     });
                   });
 
-                  setConversationId(resolve.data.message.conversationId);
+                  setConversationId(sentMessage.conversationId);
                 }
+
+                setTimeout(() => {
+                  setMessages((prevMessages) => {
+                    const updatedMessages = prevMessages.map((m) => {
+                      // console.log(
+                      //   "Changing the respective message",
+                      //   m,
+                      //   sentMessage
+                      // );
+                      if (m.id === sentMessage.id) {
+                        return sentMessage;
+                      }
+                      return m;
+                    });
+
+                    return updatedMessages;
+                  });
+                }, 300);
               })
               .catch((reject) => {
                 console.log("An Error Occured While Sending the Message");
@@ -133,20 +179,23 @@ export function useChatForm() {
             console.log("An Error Occured While Uploading the Image");
           });
       } else {
+        // Simple Text Message
         axios
           .post("http://localhost:3000/api/send-message", request)
           .then((resolve) => {
-            console.log("Message is Successfully Sent", resolve);
-            socket?.send("send-message", {
-              recipientId: recipient?.id,
-              conversationId: resolve.data.message.conversationId,
-              messageId: resolve.data.message.messageId,
-            });
+            const sentMessage: MessageType = resolve.data.data.message;
 
+            console.log("Message is Successfully Sent", sentMessage);
+            socket?.send("send-message", {
+              message: sentMessage,
+            } as SendMessage);
+
+            // If this the new Conversation and then hume client side ui bhi update karna Padega
+            // For Group ignore
             if (!conversationId) {
               console.log("User Does not Exists so sending");
               const newConversation: ConversationType = {
-                id: resolve.data.message.conversationId,
+                id: sentMessage.conversationId,
                 isGroup: false,
                 participants: [
                   {
@@ -160,7 +209,7 @@ export function useChatForm() {
                 ],
                 messages: [
                   {
-                    content: data.message,
+                    content: sentMessage.content,
                     createdAt: new Date(),
                     messageType: "compose",
                   },
@@ -180,9 +229,27 @@ export function useChatForm() {
                 });
               });
 
-              // This causes the rerender of convo component causing double messages
-              setConversationId(resolve.data.message.conversationId);
+              setConversationId(sentMessage.conversationId);
             }
+
+            setTimeout(() => {
+              setMessages((prevMessages) => {
+                const updatedMessages = prevMessages.map((m) => {
+                  // console.log(
+                  //   "Changing the respective message",
+                  //   m,
+                  //   sentMessage
+                  // );
+                  if (m.id === sentMessage.id) {
+                    return sentMessage;
+                  }
+                  return m;
+                });
+
+                return updatedMessages;
+              });
+              playSound("message-sent");
+            }, 300);
           })
           .catch((reject) => {
             console.log("An Error Occured While Sending the Message");
@@ -193,13 +260,20 @@ export function useChatForm() {
         setMessages([
           ...messages,
           {
-            id: crypto.randomUUID(),
-            sender: true,
+            id: generatedId,
+            isSender: true,
             content: data.message,
             createdAt: new Date(),
-            status: "",
+            statusUpdates: [
+              {
+                userId: recipient?.id || "",
+                status: "sent",
+              },
+            ],
             messageType: "compose",
             attachmentUrl: showPreview,
+            sender: { username: recipient?.username as string },
+            conversationId: conversationId,
           },
         ]);
       }

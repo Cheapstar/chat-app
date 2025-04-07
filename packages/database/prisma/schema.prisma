@@ -68,7 +68,7 @@ model MessageStatus {
   id         String   @id @default(uuid())
   message    Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
   messageId  String
-  userId     String
+  userId     String   // User Jiske Corresponding ye status h since sender k liye koi status nahi hoga 
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   status     String   @default("sent") // sent, delivered, read
   updatedAt  DateTime @updatedAt

@@ -5,11 +5,9 @@ import { useAtom } from "jotai";
 import {
   conversationIdAtom,
   conversationsAtom,
-  ConversationType,
   LoadConvoAtom,
   messagesAtom,
-  MessageType,
-  recipientAtom,
+  showCreateGroupModal,
   socketAtom,
 } from "../store/store";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -17,6 +15,14 @@ import { getNewMessage } from "../actions/getNewMessage";
 import axios from "axios";
 import { resolve } from "dns";
 import { getUserWithId } from "../actions/getUserWithId";
+import { ConversationType, MessageType } from "../types/types";
+import { playSound } from "./hooks/sound";
+import { FaPlus } from "react-icons/fa";
+
+interface SocketNewMessage {
+  senderId: string;
+  message: MessageType;
+}
 
 export function ChatApp() {
   const [loadConvo] = useAtom(LoadConvoAtom);
@@ -25,7 +31,7 @@ export function ChatApp() {
   const [selectedConversation, setSelectedConversation] =
     useAtom(conversationIdAtom);
   const [socket] = useAtom(socketAtom);
-  const [recipient, setRecipient] = useAtom(recipientAtom);
+  const [showGroupModal, setShowGroupModal] = useAtom(showCreateGroupModal);
 
   // State to hold incoming message data
   const [incomingMessage, setIncomingMessage] = useState(null);
@@ -34,98 +40,143 @@ export function ChatApp() {
 
   const handleNewMessage = useCallback(() => {
     if (!incomingMessage) return;
-    const { conversationId, messageId, senderId } = incomingMessage;
+    const { message: newMessage, senderId } =
+      incomingMessage as SocketNewMessage;
 
-    getNewMessage(messageId, senderId)
-      .then((newMessage) => {
-        // Update current messages if the incoming message belongs to the selected conversation
-        console.log(
-          "Adding message to current conversation view",
-          currentConvoId
-        );
+    // console.log("Socket conversation Id is", newMessage);
+    // From Socket we will get the senderId and messageId
+    // Fetch the newMessage and then update the ui
 
-        // if currently opened conversation has id = covnversationID, this updates the ui
-        if (conversationId === selectedConversation) {
-          // update the ui
-          setMessages((prev) => [
-            ...prev,
-            {
-              ...newMessage.data.message,
-              sender: false,
-            } as unknown as MessageType,
-          ]);
+    // Update current messages if the incoming message belongs to the selected conversation
+    // console.log("Adding message to current conversation view", currentConvoId);
 
-          // updating the status to Read
-          axios
-            .post("http://localhost:3000/api/update-message-status", {
-              conversationId,
-            })
-            .then((newMessage) => {
-              if (socket)
-                socket.send("message-status-updated", {
-                  conversationId,
-                  recipientId: senderId,
-                  messageId,
-                });
-            })
-            .catch((reject) => {
-              console.log("Could not update the Message Status");
+    // if currently opened conversation has id = covnversationID, this updates the ui
+    if (newMessage.conversationId === selectedConversation) {
+      // update the ui
+      setMessages((prev) => [
+        ...prev,
+        {
+          ...newMessage,
+          isSender: false,
+        } as MessageType,
+      ]);
+
+      // updating the status to Read
+      axios
+        .post("http://localhost:3000/api/update-message-status", {
+          conversationId: newMessage.conversationId,
+        })
+        .then((response) => {
+          // Notify the sender to update the message status
+          console.log("Response of update status", response);
+          if (socket) {
+            socket.send("message-status-updated", {
+              conversationId: newMessage.conversationId,
             });
-
-          setConversations((prev) => {
-            const updated = prev.map((convo) => {
-              if (convo.id === conversationId) {
-                convo._count.messages = 0;
-              }
-              return convo;
-            });
-
-            return [...updated].sort((a, b) => {
-              const dateA = a.messages[0]?.createdAt
-                ? new Date(a.messages[0].createdAt).getTime()
-                : 0;
-              const dateB = b.messages[0]?.createdAt
-                ? new Date(b.messages[0].createdAt).getTime()
-                : 0;
-              return dateB - dateA;
-            });
-          });
-        } else {
-          // check if this conversation exists if not make it
-          let convoExists = false;
-
-          console.log("Received Conversation Id", conversationId);
-          console.log("Conversations", conversations);
-          for (let i = 0; i < conversations.length - 1; i++) {
-            if (
-              conversations[i]?.id === newMessage.data.message?.conversationId
-            ) {
-              convoExists = true;
-              break;
-            }
           }
+        })
+        .catch((reject) => {
+          console.log("Could not update the Message Status");
+        });
 
-          if (convoExists) {
-            // Update conversations list
-            // This is on the client side , updating the ui
-            // Existing User
-            setConversations((prev) => {
-              const updated = prev.map((convo) => {
-                if (convo.id === conversationId) {
-                  convo._count.messages += 1;
+      // Update the ui
+      setConversations((prev) => {
+        const updated = prev.map((convo) => {
+          if (convo.id === newMessage.conversationId) {
+            convo._count.messages = 0;
+          }
+          return convo;
+        });
 
-                  if (convo.messages[0]) {
-                    convo.messages[0].content = newMessage.data.message
-                      ?.content as string;
-                    convo.messages[0].createdAt = newMessage.data.message
-                      ?.createdAt as Date;
-                    convo.messages[0].messageType = "compose";
-                  }
-                }
-                return convo;
-              });
+        return [...updated].sort((a, b) => {
+          const dateA = a.messages[0]?.createdAt
+            ? new Date(a.messages[0].createdAt).getTime()
+            : 0;
+          const dateB = b.messages[0]?.createdAt
+            ? new Date(b.messages[0].createdAt).getTime()
+            : 0;
+          return dateB - dateA;
+        });
+      });
 
-              return [...updated].sort((a, b) => {
+      playSound("message-received");
+    } else {
+      // check if this conversation exists if not make it
+      let convoExists = false;
+
+      console.log("Received Conversation Id", newMessage.conversationId);
+      console.log("Conversations", conversations);
+      for (let i = 0; i < conversations.length; i++) {
+        if (conversations[i]?.id === newMessage.conversationId) {
+          convoExists = true;
+          break;
+        }
+      }
+
+      // console.log("Does convo exists", convoExists);
+      if (convoExists) {
+        // Update conversations list
+        // This is on the client side , updating the ui
+        // Existing User
+        setConversations((prev) => {
+          const updated = prev.map((convo) => {
+            if (convo.id === newMessage.conversationId) {
+              convo._count.messages += 1;
+
+              if (convo.messages[0]) {
+                convo.messages[0].content = newMessage?.content as string;
+                convo.messages[0].createdAt = newMessage?.createdAt as Date;
+                convo.messages[0].messageType = "compose";
+              }
+            }
+            return convo;
+          });
+
+          // Updating the ui
+          return [...updated].sort((a, b) => {
+            const dateA = a.messages[0]?.createdAt
+              ? new Date(a.messages[0].createdAt).getTime()
+              : 0;
+            const dateB = b.messages[0]?.createdAt
+              ? new Date(b.messages[0].createdAt).getTime()
+              : 0;
+            return dateB - dateA;
+          });
+        });
+        playSound("message-convo-not-opened");
+      } else {
+        // This is for New user
+        // Iss user se ye pehla message aaya hai
+        getUserWithId(senderId)
+          .then((userResponse) => {
+            console.log("User Does not Exists so sending");
+            // Make new Conversation for client sides updates
+            const newConversation: ConversationType = {
+              id: newMessage.conversationId as string,
+              isGroup: false,
+              participants: [
+                {
+                  id: "",
+                  user: {
+                    id: userResponse.data.message?.id as string,
+                    profilePicture: userResponse.data.message
+                      ?.profilePicture as string,
+                    username: userResponse.data.message?.username as string,
+                  },
+                },
+              ],
+              messages: [
+                {
+                  content: newMessage.content as string,
+                  createdAt: new Date(),
+                  messageType: "compose",
+                },
+              ],
+              _count: { messages: 1 },
+            };
+
+            setConversations((prevState) => {
+              return [...prevState, newConversation].sort((a, b) => {
                 const dateA = a.messages[0]?.createdAt
                   ? new Date(a.messages[0].createdAt).getTime()
                   : 0;
@@ -135,78 +186,55 @@ export function ChatApp() {
                 return dateB - dateA;
               });
             });
-          } else {
-            // This is for New user
-            getUserWithId(senderId)
-              .then((userResponse) => {
-                console.log("User Does not Exists so sending");
-                const newConversation: ConversationType = {
-                  id: newMessage.data.message?.conversationId as string,
-                  isGroup: false,
-                  participants: [
-                    {
-                      id: "",
-                      user: {
-                        id: userResponse.data.message?.id as string,
-                        profilePicture: userResponse.data.message
-                          ?.profilePicture as string,
-                        username: userResponse.data.message?.username as string,
-                      },
-                    },
-                  ],
-                  messages: [
-                    {
-                      content: newMessage.data.message?.content as string,
-                      createdAt: new Date(),
-                      messageType: "compose",
-                    },
-                  ],
-                  _count: { messages: 1 },
-                };
 
-                setConversations((prevState) => {
-                  return [...prevState, newConversation].sort((a, b) => {
-                    const dateA = a.messages[0]?.createdAt
-                      ? new Date(a.messages[0].createdAt).getTime()
-                      : 0;
-                    const dateB = b.messages[0]?.createdAt
-                      ? new Date(b.messages[0].createdAt).getTime()
-                      : 0;
-                    return dateB - dateA;
-                  });
-                });
-              })
-              .catch((reject) => {
-                console.log("An Error occured While GetUserWithId");
-              });
-          }
-        }
+            playSound("message-new-convo");
+          })
+          .catch((reject) => {
+            console.log("An Error occured While GetUserWithId");
+          });
+      }
+    }
 
-        // Clear incoming message state
-        setIncomingMessage(null);
-      })
-      .catch((error) => {
-        console.error("Error fetching new message:", error);
-        setIncomingMessage(null);
-      });
+    // Clear incoming message state
+    setIncomingMessage(null);
   }, [incomingMessage]);
 
   const updateMessageStatus = useCallback((payload: any) => {
-    const { conversationId, recipientId, messageId } = payload;
+    console.log("Received the update status request");
+    const { conversationId, userId: oneWhoUpdatedTheStatus } = payload;
 
     if (conversationId === currentConvoId.current) {
-      setMessages((prevMessages) => {
-        const newMessages = [...prevMessages];
+      setTimeout(() => {
+        setMessages((prevMessages) => {
+          return prevMessages.map((message) => {
+            const updatedStatusUpdates = message.statusUpdates.map(
+              (statusUpdate) => {
+                if (
+                  statusUpdate.userId === oneWhoUpdatedTheStatus &&
+                  statusUpdate.status !== "read"
+                ) {
+                  return {
+                    ...statusUpdate,
+                    status: "read",
+                  };
+                }
+                return statusUpdate;
+              }
+            );
 
-        for (let i = newMessages.length - 1; i >= 0; i--) {
-          if (newMessages[i]?.status === "read") break;
-          (newMessages[i] as MessageType).status = "read";
-        }
-        return newMessages;
-      });
+            return {
+              ...message,
+              statusUpdates: updatedStatusUpdates,
+            };
+          });
+        });
+      }, 500);
     }
   }, []);
 
+  const addedToGroup = useCallback((payload: any) => {
+    setConversations((prevState) => [payload.conversation, ...prevState]);
+  }, []);
   // Socket event handler
   useEffect(() => {
     if (!socket) return;
@@ -218,6 +246,7 @@ export function ChatApp() {
 
     socket.on("new-message", onNewMessage);
     socket.on("update-message-status", updateMessageStatus);
+    socket.on("added-to-group", addedToGroup);
 
     return () => {
       socket.off("new-message", onNewMessage);
@@ -240,11 +269,22 @@ export function ChatApp() {
   return (
     <div className="bg-white h-[100%] shadow-2xs border-1 border-gray-200 rounded-sm flex rounded-r-md">
       <div className="flex flex-col  min-w-[30%]">
-        <div className="bg-white text-4xl px-6 py-4 text-sky-700 sticky top-0 z-30">
+        <div className="bg-white text-4xl px-6 py-4 text-sky-700 sticky top-0 ">
           Chats
         </div>
-        <div className="flex flex-col pr-2 border-r-1 border-gray-200z-20 overflow-auto">
-          <ListOfContacts />
+        <div className="flex flex-col  border-r border-gray-200 relative h-full overflow-auto ">
+          <div className="flex-1 overflow-auto ">
+            <ListOfContacts />
+          </div>
+          <button
+            className="absolute bottom-4 border-gray-200  w-max rounded-full
+           right-5 p-4 bg-[#60B5FF] hover:bg-[#1B56FD] transition-all active:scale-95"
+            onClick={() => {
+              setShowGroupModal(true);
+            }}
+          >
+            <FaPlus className="text-2xl rounded-full text-white" />
+          </button>
         </div>
       </div>
       {loadConvo && <Convo />}

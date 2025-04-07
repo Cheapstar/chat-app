@@ -3,8 +3,19 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../lib/auth";
 import { prisma } from "@repo/database";
+import { MessageType, ServerActionResponseType } from "../types/types";
 
-export async function getNewMessage(messageId: string, senderId: string) {
+interface ServerActionNewMessage extends ServerActionResponseType {
+  data: {
+    message?: MessageType;
+    error?: string;
+  };
+}
+
+export async function getNewMessage(
+  messageId: string,
+  conversationId: string
+): Promise<ServerActionNewMessage> {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user || !session.user.userId) {
@@ -19,14 +30,41 @@ export async function getNewMessage(messageId: string, senderId: string) {
     const message = await prisma.message.findFirst({
       where: {
         id: messageId,
-        senderId: senderId,
+        conversationId,
+      },
+      select: {
+        id: true,
+        senderId: true,
+        content: true,
+        createdAt: true,
+        messageType: true,
+        attachmentUrl: true,
+        conversationId: true,
+        statusUpdates: {
+          select: {
+            status: true,
+            userId: true,
+          },
+        },
+        sender: {
+          select: {
+            username: true,
+          },
+        },
       },
     });
+
+    if (!message) {
+      throw new Error("Error Occured While fetching the New Message");
+    }
 
     return {
       success: true,
       data: {
-        message,
+        message: {
+          ...message,
+          isSender: session?.user.userId === message.senderId,
+        },
       },
     };
   } catch (error) {

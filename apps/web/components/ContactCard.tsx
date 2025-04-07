@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 import { useAtom } from "jotai";
 import Image from "next/image";
@@ -6,10 +7,10 @@ import {
   conversationsAtom,
   LoadConvoAtom,
   messagesAtom,
-  recipientAtom,
+  selectedConversationAtom,
 } from "../store/store";
 import { ModifiedTimeAgo, timeAgo } from "../utils/date";
-import { ConversationType } from "../store/store";
+import { ConversationType } from "../types/types";
 
 export function ContactCard({
   conversation,
@@ -20,8 +21,11 @@ export function ContactCard({
 
   const [conversationId, setConversationId] = useAtom(conversationIdAtom);
   const [conversations, setConversations] = useAtom(conversationsAtom);
-  const [recipient, setRecipient] = useAtom(recipientAtom);
   const [messages, setMessages] = useAtom(messagesAtom);
+
+  const [selectedConversation, setSelectedConversation] = useAtom(
+    selectedConversationAtom
+  );
 
   function clickHandler() {
     if (conversation.id != conversationId) {
@@ -36,13 +40,7 @@ export function ContactCard({
         return convo;
       });
 
-      setRecipient({
-        id: conversation.participants[0]?.user.id as string,
-        username: conversation.participants[0]?.user.username as string,
-        profilePicture: conversation.participants[0]?.user
-          .profilePicture as string,
-      });
-
+      setSelectedConversation(conversation);
       setConversations(updatedConversations);
       console.log("ConversationId from ContactCard", conversation.id);
     }
@@ -59,14 +57,21 @@ export function ContactCard({
             className="rounded-full w-14 h-14"
             height={40}
             width={40}
-            src={`${conversation.participants[0]?.user.profilePicture ? `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${conversation.participants[0]?.user.profilePicture}` : "/default_Profile.png"}`}
+            src={`${
+              conversation.participants[0]?.user.profilePicture &&
+              !conversation.isGroup
+                ? `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${conversation.participants[0]?.user.profilePicture}`
+                : "/default_Profile.png"
+            }`}
             alt="Profile-Picture"
           ></img>
         </div>
         <div className="grow flex justify-between">
           <div className="pl-4">
             <p className="text-lg font-normal overflow-ellipsis text-left">
-              {conversation?.participants[0]?.user?.username}
+              {conversation.isGroup
+                ? conversation.groupName
+                : conversation?.participants[0]?.user?.username}
             </p>
             <p className="text-left text-sm max-w-56 break-words text-ellipsis line-clamp-1">
               {conversation.messages[0]?.messageType === "text"

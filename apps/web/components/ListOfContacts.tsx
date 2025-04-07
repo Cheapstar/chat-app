@@ -3,8 +3,9 @@ import { useEffect, useState } from "react";
 import { ContactCard } from "./ContactCard";
 import { getConversations } from "../actions/getConversations";
 import { useAtom } from "jotai";
-import { conversationsAtom, ConversationType } from "../store/store";
+import { conversationsAtom } from "../store/store";
 import { motion } from "motion/react";
+import { ConversationType } from "../types/types";
 
 export function ListOfContacts() {
   const [conversations, setConversations] = useAtom(conversationsAtom);
@@ -12,7 +13,9 @@ export function ListOfContacts() {
   useEffect(() => {
     async function fetchConversations() {
       const newConversations = await getConversations();
-      setConversations(newConversations as unknown as ConversationType[]);
+      setConversations(
+        newConversations.data.conversations as ConversationType[]
+      );
       console.log(newConversations);
     }
 
