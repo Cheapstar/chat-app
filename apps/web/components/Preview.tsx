@@ -5,6 +5,9 @@ import { UseFormSetValue, UseFormWatch } from "react-hook-form";
 import { GiPaperPlane } from "react-icons/gi";
 import { RxCross1 } from "react-icons/rx";
 import { FileRegisterType } from "./hooks/useChatForm";
+import { MdAudiotrack } from "react-icons/md";
+import { FaFile, FaRegFilePdf } from "react-icons/fa6";
+import { FaPlay } from "react-icons/fa";
 
 export function Preview({
   src,
@@ -159,7 +162,12 @@ export function Preview({
                 );
               }
 
-              return <p className="text-gray-500">Unsupported file type</p>;
+              return (
+                <div className="flex flex-col justify-center items-center gap-3">
+                  <FaFile className="text-9xl"></FaFile>
+                  <p className="text-gray-500">Unsupported file type</p>
+                </div>
+              );
             })()
           ) : (
             <p className="text-gray-500">No file selected</p>
@@ -168,10 +176,10 @@ export function Preview({
 
         {/* Thumbnails Section */}
         {src.length > 0 && (
-          <section className="flex gap-2 mt-4 overflow-auto py-2 border-t flex-wrap">
+          <section className="flex gap-3 mt-4 overflow-auto py-2 border-t flex-wrap">
             {src.map((file, idx) => {
               const type = file.type;
-              console.log("Type of the file is", type);
+              // console.log("Type of the file is", type);
 
               return (
                 <div
@@ -181,33 +189,41 @@ export function Preview({
                   <button
                     type="button"
                     onClick={() => setSelectedFile(file)}
-                    className={`relative ${selectedFile === file ? "ring-2 ring-blue-500" : ""}`}
+                    className={`relative border-0 ${selectedFile === file ? "ring-2 ring-blue-500 rounded-md" : ""}`}
                   >
                     {type === "image" && (
                       <img
                         src={file.url}
                         alt={`thumbnail ${idx}`}
-                        className="w-20 h-20 object-cover rounded-md border"
+                        className="w-20 h-20 object-cover rounded-md "
                       />
                     )}
                     {type === "video" && (
-                      <div className="w-20 h-20 bg-gray-100 flex justify-center items-center rounded-md border">
-                        <span className="text-xs text-gray-700">Video</span>
+                      <div className="w-20 h-20 bg-gray-100 flex justify-center items-center rounded-md ">
+                        <span className=" text-gray-700">
+                          <FaPlay className="text-3xl"></FaPlay>
+                        </span>
                       </div>
                     )}
                     {type === "audio" && (
-                      <div className="w-20 h-20 bg-gray-100 flex justify-center items-center rounded-md border">
-                        <span className="text-xs text-gray-700">Audio</span>
+                      <div className="w-20 h-20 bg-gray-100 flex justify-center items-center rounded-md ">
+                        <span className="text-gray-700">
+                          <MdAudiotrack className="text-3xl"></MdAudiotrack>
+                        </span>
                       </div>
                     )}
                     {type === "pdf" && (
-                      <div className="w-20 h-20 bg-gray-100 flex justify-center items-center rounded-md border">
-                        <span className="text-xs text-gray-700">PDF</span>
+                      <div className="w-20 h-20 bg-gray-100 flex justify-center items-center rounded-md ">
+                        <span className=" text-gray-700">
+                          <FaRegFilePdf className="text-3xl"></FaRegFilePdf>
+                        </span>
                       </div>
                     )}
                     {type === "unknown" && (
-                      <div className="w-20 h-20 bg-gray-100 flex justify-center items-center rounded-md border">
-                        <span className="text-xs text-gray-700">File</span>
+                      <div className="w-20 h-20 bg-gray-100 flex justify-center items-center rounded-md ">
+                        <span className=" text-gray-700">
+                          <FaFile className="text-3xl"></FaFile>
+                        </span>
                       </div>
                     )}
                   </button>

@@ -15,7 +15,7 @@ import axios, { AxiosResponse } from "axios";
 import { SendMessageResponse } from "../../app/api/send-message/route";
 import { ConversationType, MessageType } from "../../types/types";
 import { playSound } from "./sound";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface SendMessageRequest {
   genMessageId: string;
@@ -556,6 +556,10 @@ export function useChatForm() {
       console.error("Error while sending message", error);
     }
   }
+
+  useEffect(() => {
+    reset();
+  }, [conversationId]);
 
   return {
     register,

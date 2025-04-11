@@ -177,17 +177,20 @@ export function ChatInput() {
 
   const closePreview = () => {
     setShowPreview(false);
+    urls.forEach((url) => URL.revokeObjectURL(url.url));
+    setUrls([]);
+    setValue("files", [], { shouldDirty: true });
   };
 
   return (
     <form
       className="flex flex-col bg-gray-200 py-2.5 px-4 rounded-br-md z-50 "
-      onSubmit={() => {
-        event?.preventDefault();
-        handleSubmit().then(() => {
-          closePreview();
-          deleteAudio();
-        });
+      onSubmit={(event) => {
+        event.preventDefault();
+        handleSubmit();
+        setShowPreview(false);
+
+        deleteAudio();
       }}
     >
       {audioUrl && (

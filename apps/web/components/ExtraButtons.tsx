@@ -20,7 +20,7 @@ export function ExtraButtons({
         className="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-100 rounded-md transition-all duration-150"
       >
         <IoMdImages className="text-blue-500" />
-        <span>Image</span>
+        <span>Photos & Videos</span>
       </button>
 
       <div className="w-px bg-gray-300 mx-1" />
@@ -34,7 +34,7 @@ export function ExtraButtons({
         className="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-100 rounded-md transition-all duration-150"
       >
         <FaFileAlt className="text-green-500" />
-        <span>Document</span>
+        <span>Documents</span>
       </button>
     </div>
   );
