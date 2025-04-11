@@ -1,6 +1,6 @@
 export interface SendMessagePayload {
   userId: string;
-  message: MessageType;
+  messages: MessageType[];
 }
 
 export interface UpdateMessageStatusPayload {

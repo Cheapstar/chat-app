@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { UserCard } from "./UserCard";
 import { getUsers } from "../actions/getUsers";
-import { UserType } from "../store/store";
+import { UserType } from "../types/types";
 
 export function Explore() {
   const [users, setUsers] = useState<UserType[]>([]);

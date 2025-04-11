@@ -6,6 +6,7 @@ import {
   LoadConvoAtom,
   messagesAtom,
   recipientAtom,
+  selectedConversationAtom,
 } from "../store/store";
 import { useRouter } from "next/navigation";
 import { set } from "zod";
@@ -25,6 +26,9 @@ export function UserCard({ user }: { user: User }) {
   const [conversationId, setConversationId] = useAtom(conversationIdAtom);
   const [recepient, setRecepient] = useAtom(recipientAtom);
   const [messages, setMessages] = useAtom(messagesAtom);
+  const [selectedConversation, setSelectedConversation] = useAtom(
+    selectedConversationAtom
+  );
 
   const router = useRouter();
 
@@ -36,6 +40,7 @@ export function UserCard({ user }: { user: User }) {
       username: user.username,
       profilePicture: user.profilePicture as string,
     });
+    setSelectedConversation(undefined);
     setMessages([]);
     router.push("/chat");
   }

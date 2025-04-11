@@ -83,7 +83,7 @@ export function CreateGroupModal() {
     <>
       {showGroupModal && (
         <main
-          className="bg-black/40 fixed inset-0 flex justify-center items-center z-40"
+          className="bg-black/40 fixed inset-0 flex justify-center items-center z-[100]"
           onClick={() => setShowGroupModal(false)}
         >
           <section

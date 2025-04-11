@@ -6,6 +6,18 @@ import { LiaCheckDoubleSolid } from "react-icons/lia";
 import { RxCross1 } from "react-icons/rx";
 import { PiClockLight } from "react-icons/pi";
 
+// messageType  ---   cloudinary Type
+
+type KnownMessageType = "audio" | "pdf" | "video" | "image" | "compose";
+
+const TYPE = {
+  audio: "video",
+  pdf: "raw",
+  video: "video",
+  image: "image",
+  compose: "image",
+};
+
 export function Message({
   message,
   isGroup,
@@ -17,11 +29,11 @@ export function Message({
   const [isZoomed, setIsZoomed] = useState<boolean>(false);
 
   const fromServer = message.attachmentUrl?.includes("chat-app");
-  let imgUrl = "";
-  if (fromServer) {
-    imgUrl = `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${message.attachmentUrl}`;
+  let attachmentUrl = "";
+  if (fromServer && TYPE[message.messageType as KnownMessageType]) {
+    attachmentUrl = `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/${TYPE[message.messageType as KnownMessageType]}/upload/${message.attachmentUrl}`;
   } else {
-    imgUrl = message.attachmentUrl as string;
+    attachmentUrl = message.attachmentUrl as string;
   }
 
   let status = "read";
@@ -63,15 +75,82 @@ export function Message({
             </span>
           )}
 
-          {/* Image */}
+          {/* Attachment */}
+          {/* Media Handling */}
           {message.attachmentUrl && (
-            <div className="max-w-[400px] max-h-[400px]">
-              <img
-                src={imgUrl}
-                alt="User Uploaded Image"
-                className="object-contain bg-white cursor-pointer rounded"
-                onClick={() => setExpandImage(true)}
-              />
+            <div className="max-w-[600px] max-h-[400px]">
+              {(message.messageType === "image" ||
+                message.messageType === "compose") && (
+                <img
+                  src={attachmentUrl}
+                  alt="Image"
+                  className="object-contain bg-white cursor-pointer rounded"
+                  onClick={() => setExpandImage(true)}
+                />
+              )}
+
+              {message.messageType === "video" && (
+                <div className="w-full min-w-[200px] max-w-[600px]">
+                  <video
+                    src={attachmentUrl}
+                    controls
+                    className="w-full max-h-[300px] rounded bg-black"
+                  />
+                </div>
+              )}
+
+              {message.messageType === "audio" && (
+                <div className="w-full min-w-[200px] max-w-[600px]">
+                  <audio
+                    src={attachmentUrl}
+                    controls
+                    className="w-full outline-none"
+                  />
+                </div>
+              )}
+
+              {message.messageType === "pdf" && (
+                <div className="flex flex-col gap-2 border rounded p-2 ">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">📄</span>
+                    <p className="font-medium break-words">
+                      {attachmentUrl.split("/").pop()}
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <a
+                      href={attachmentUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-gray-300 underline text-sm"
+                    >
+                      View PDF
+                    </a>
+                    <a
+                      href={attachmentUrl}
+                      download
+                      className="text-gray-300 underline text-sm"
+                    >
+                      Download
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {message.messageType === "unknown" && (
+                <a
+                  href={attachmentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-blue-600 underline"
+                >
+                  <span className="text-xl">📎</span>
+                  <span className="break-words">
+                    {attachmentUrl.split("/").pop()}
+                  </span>
+                </a>
+              )}
             </div>
           )}
 
@@ -83,12 +162,12 @@ export function Message({
           )}
 
           {/* Timestamp + status */}
-          <div className="absolute bottom-0 right-2 flex gap-1">
-            <p className="text-[10px] text-gray-300 flex items-end px-2 py-2">
+          <div className=" flex gap-2 justify-end">
+            <p className="text-[10px] text-gray-300 flex items-end ">
               {moment(message.createdAt).format("HH:mm")}
             </p>
             {message.isSender && (
-              <p className="flex items-end pr-0.5 pb-2">
+              <p className="flex items-end ">
                 {status === "sent" ? (
                   <PiClockLight className="text-lg" />
                 ) : (
@@ -123,7 +202,7 @@ export function Message({
             onClick={(e) => e.stopPropagation()}
           >
             <img
-              src={imgUrl}
+              src={attachmentUrl}
               className={`object-contain w-full h-full ${
                 isZoomed
                   ? "scale-200 cursor-zoom-out"

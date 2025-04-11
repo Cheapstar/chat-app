@@ -71,6 +71,41 @@ export async function uploadImageToCloudinary(
     throw new Error("Sorry Couldn't upload the image thy bruv!!");
   }
 }
+export async function uploadFileToCloudinary(
+  buffer: Buffer,
+  name: string,
+  config: { apiKey: string; apiSecret: string; cloudName: string }
+) {
+  try {
+    cloudinary.config({
+      cloud_name: config.cloudName,
+      api_key: config.apiKey,
+      api_secret: config.apiSecret,
+    });
+
+    const result = await new Promise<UploadApiResponse>((resolve, reject) => {
+      const uploadStream = cloudinary.uploader
+        .upload_stream(
+          {
+            folder: "chat-app",
+            resource_type: "auto",
+          },
+          (error, result) => {
+            if (error) {
+              console.log(error);
+              reject(new Error("Sorry, couldn't upload the File, thy bruv!!"));
+            } else resolve(result as UploadApiResponse);
+          }
+        )
+        .end(buffer);
+    });
+
+    return result.public_id;
+  } catch (error) {
+    console.log("Error Inside the Cloudinary Api", error);
+    throw new Error("Sorry Couldn't upload the File thy bruv!!");
+  }
+}
 
 export function createCloudinaryUrl(publicId: string) {
   // Build the URL

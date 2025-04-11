@@ -59,6 +59,7 @@ model Message {
   content        String?
   messageType    String       @default("text") // text, image, video, file
   attachmentUrl  String?
+  audioUrl       String?
   createdAt      DateTime     @default(now())
 
   statusUpdates  MessageStatus[]

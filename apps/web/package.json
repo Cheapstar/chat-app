@@ -11,11 +11,11 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@repo/websocketclient": "*",
     "@hookform/resolvers": "^3.10.0",
     "@repo/cloudinary": "*",
     "@repo/database": "*",
     "@repo/ui": "*",
+    "@repo/websocketclient": "*",
     "@tailwindcss/postcss": "^4.0.1",
     "@types/bcrypt": "^5.0.2",
     "axios": "^1.8.3",
@@ -26,11 +26,13 @@
     "motion": "^12.0.6",
     "next": "^15.1.6",
     "next-auth": "^4.24.11",
+    "pdfjs-dist": "^5.1.91",
     "postcss": "^8.5.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.54.2",
     "react-icons": "^5.4.0",
+    "react-pdf": "^9.2.1",
     "tailwindcss": "^4.0.1",
     "zod": "^3.24.1"
   },

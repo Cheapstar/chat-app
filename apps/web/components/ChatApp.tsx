@@ -21,7 +21,7 @@ import { FaPlus } from "react-icons/fa";
 
 interface SocketNewMessage {
   senderId: string;
-  message: MessageType;
+  messages: MessageType[];
 }
 
 export function ChatApp() {
@@ -40,9 +40,10 @@ export function ChatApp() {
 
   const handleNewMessage = useCallback(() => {
     if (!incomingMessage) return;
-    const { message: newMessage, senderId } =
+    const { messages: newMessages, senderId } =
       incomingMessage as SocketNewMessage;
 
+    console.log("Incoming Message", incomingMessage);
     // console.log("Socket conversation Id is", newMessage);
     // From Socket we will get the senderId and messageId
     // Fetch the newMessage and then update the ui
@@ -51,27 +52,31 @@ export function ChatApp() {
     // console.log("Adding message to current conversation view", currentConvoId);
 
     // if currently opened conversation has id = covnversationID, this updates the ui
-    if (newMessage.conversationId === selectedConversation) {
+    if (
+      (newMessages[0] as MessageType).conversationId === selectedConversation
+    ) {
       // update the ui
       setMessages((prev) => [
         ...prev,
-        {
-          ...newMessage,
-          isSender: false,
-        } as MessageType,
+        ...newMessages.map((newMessage) => {
+          return {
+            ...newMessage,
+            isSender: false,
+          } as MessageType;
+        }),
       ]);
 
       // updating the status to Read
       axios
         .post("http://localhost:3000/api/update-message-status", {
-          conversationId: newMessage.conversationId,
+          conversationId: (newMessages[0] as MessageType).conversationId,
         })
         .then((response) => {
           // Notify the sender to update the message status
           console.log("Response of update status", response);
           if (socket) {
             socket.send("message-status-updated", {
-              conversationId: newMessage.conversationId,
+              conversationId: (newMessages[0] as MessageType).conversationId,
             });
           }
         })
@@ -82,7 +87,7 @@ export function ChatApp() {
       // Update the ui
       setConversations((prev) => {
         const updated = prev.map((convo) => {
-          if (convo.id === newMessage.conversationId) {
+          if (convo.id === (newMessages[0] as MessageType).conversationId) {
             convo._count.messages = 0;
           }
           return convo;
@@ -104,10 +109,16 @@ export function ChatApp() {
       // check if this conversation exists if not make it
       let convoExists = false;
 
-      console.log("Received Conversation Id", newMessage.conversationId);
+      console.log(
+        "Received Conversation Id",
+        (newMessages[0] as MessageType).conversationId
+      );
       console.log("Conversations", conversations);
       for (let i = 0; i < conversations.length; i++) {
-        if (conversations[i]?.id === newMessage.conversationId) {
+        if (
+          conversations[i]?.id ===
+          (newMessages[0] as MessageType).conversationId
+        ) {
           convoExists = true;
           break;
         }
@@ -120,12 +131,14 @@ export function ChatApp() {
         // Existing User
         setConversations((prev) => {
           const updated = prev.map((convo) => {
-            if (convo.id === newMessage.conversationId) {
+            if (convo.id === (newMessages[0] as MessageType).conversationId) {
               convo._count.messages += 1;
 
               if (convo.messages[0]) {
-                convo.messages[0].content = newMessage?.content as string;
-                convo.messages[0].createdAt = newMessage?.createdAt as Date;
+                convo.messages[0].content = (newMessages[0] as MessageType)
+                  ?.content as string;
+                convo.messages[0].createdAt = (newMessages[0] as MessageType)
+                  ?.createdAt as Date;
                 convo.messages[0].messageType = "compose";
               }
             }
@@ -152,7 +165,7 @@ export function ChatApp() {
             console.log("User Does not Exists so sending");
             // Make new Conversation for client sides updates
             const newConversation: ConversationType = {
-              id: newMessage.conversationId as string,
+              id: (newMessages[0] as MessageType).conversationId as string,
               isGroup: false,
               participants: [
                 {
@@ -167,7 +180,8 @@ export function ChatApp() {
               ],
               messages: [
                 {
-                  content: newMessage.content as string,
+                  content: (newMessages[newMessages.length - 1] as MessageType)
+                    .content as string,
                   createdAt: new Date(),
                   messageType: "compose",
                 },
@@ -262,12 +276,12 @@ export function ChatApp() {
   useEffect(() => {
     if (!incomingMessage) return;
 
-    console.log("This is Running Twice");
+    // console.log("This is Running Twice");
     handleNewMessage();
   }, [incomingMessage]);
 
   return (
-    <div className="bg-white h-[100%] shadow-2xs border-1 border-gray-200 rounded-sm flex rounded-r-md">
+    <div className="bg-white h-[100%] shadow-2xs border-1 border-gray-200 rounded-sm flex rounded-r-md overflow-hidden">
       <div className="flex flex-col  min-w-[30%]">
         <div className="bg-white text-4xl px-6 py-4 text-sky-700 sticky top-0 ">
           Chats

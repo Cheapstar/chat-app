@@ -20,6 +20,8 @@ export const LoadConvoAtom = atom<true | false>(false);
 
 export const conversationIdAtom = atom<string>("");
 
+export const recipientAtom = atom<RecipientType>();
+
 export const socketAtom = atom<WebSocketClient | null>();
 
 export const userAtom = atomWithStorage<SessionUser | undefined>("user", {
@@ -28,7 +30,5 @@ export const userAtom = atomWithStorage<SessionUser | undefined>("user", {
   image: "",
   userId: "",
 });
-
-export const previewAtom = atom<string>();
 
 export const showCreateGroupModal = atom<boolean>();

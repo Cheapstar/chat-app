@@ -2,6 +2,7 @@ import WebSocket, { WebSocketServer } from "ws";
 import { Server as HTTPServer } from "http";
 import {
   ConversationType,
+  MessageType,
   SendMessagePayload,
   UpdateMessageStatusPayload,
 } from "../types.js";
@@ -17,7 +18,7 @@ import { prisma } from "@repo/database";
 export class WebSocketClient {
   private wss: WebSocketServer;
   private CLIENTS: Map<string, WebSocket> = new Map<string, WebSocket>(); // userId --- WS
-  private handlers: Map<string, Map<string, handlerFn[]>> = new Map(); // userId --- (type --- handler)
+  handlers: Map<string, Map<string, handlerFn[]>> = new Map(); // userId --- (type --- handler)
 
   constructor(server: HTTPServer) {
     this.wss = new WebSocketServer({ server });
@@ -117,23 +118,25 @@ export class WebSocketClient {
   };
 
   initWs = (userId: string) => {
-    this.on("send-message", this.sendMessageHandler, userId);
+    this.on("send-messages", this.sendMessageHandler, userId);
     this.on("message-status-updated", this.updateMessageStatusHandler, userId);
     this.on("new-group-created", this.groupCreationHandler, userId);
   };
 
   sendMessageHandler = ({ userId: senderId, payload }: Args) => {
-    const { message }: SendMessagePayload = payload;
+    const { messages }: SendMessagePayload = payload;
 
     /* Fetch the recipients of the conversation and then 
         if online => notify the client,
         else move on 
     */
 
+    console.log("Messages are ", messages);
+
     prisma.conversation
       .findFirst({
         where: {
-          id: message.conversationId,
+          id: (messages[0] as MessageType).conversationId,
         },
         select: {
           participants: {
@@ -150,9 +153,15 @@ export class WebSocketClient {
         if (!resolve) throw new Error("Couldn't fetch the participants");
         const recipients = resolve.participants;
 
+        console.log(
+          "Trying to send to recipients:",
+          recipients.map((r) => r.userId)
+        );
+        console.log("Currently connected clients:", this.getClientIds());
+
         for (const recipient of recipients) {
           this.send(recipient.userId, "new-message", {
-            message,
+            messages,
             senderId,
           });
         }

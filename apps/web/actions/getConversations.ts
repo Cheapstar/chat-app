@@ -71,6 +71,7 @@ export async function getConversations(): Promise<ServerActionConversations> {
                 statusUpdates: {
                   some: {
                     status: "unread",
+                    userId: session.user.userId,
                   },
                 },
               },
