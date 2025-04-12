@@ -29,8 +29,6 @@ export function Convo() {
   const [conversationId] = useAtom(conversationIdAtom);
   const [user] = useAtom(userAtom);
   const [conversations] = useAtom(conversationsAtom);
-  const [isLoading, setIsLoading] = useState(false);
-  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
 
   const [selectedConversation, setSelectedConversation] = useAtom(
     selectedConversationAtom
@@ -45,11 +43,11 @@ export function Convo() {
   // For loading messages on scroll
   const messageContainerRef = useRef<HTMLDivElement>(null);
 
-  const [socket] = useAtom(socketAtom);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Store the last scroll position
-  const previousScrollHeightRef = useRef(0);
-  const scrollPositionRef = useRef(0);
+  const prevScrollHeight = useRef<number>(null);
+
+  const [socket] = useAtom(socketAtom);
 
   useEffect(() => {
     async function fetchMessages() {
@@ -59,13 +57,6 @@ export function Convo() {
         }
 
         setIsLoading(true);
-
-        // Save the current scroll position and height
-        if (messageContainerRef.current) {
-          previousScrollHeightRef.current =
-            messageContainerRef.current.scrollHeight;
-          scrollPositionRef.current = messageContainerRef.current.scrollTop;
-        }
 
         const response = await getMessages({
           conversationId,
@@ -85,6 +76,7 @@ export function Convo() {
             );
           });
 
+          // Updating the last message Date
           lastMessageDateRef.current = result[0]?.createdAt as Date;
 
           await new Promise((resolve) => setTimeout(resolve, 500));
@@ -106,13 +98,6 @@ export function Convo() {
 
           // Maintain scroll position after loading older messages
           setTimeout(() => {
-            if (messageContainerRef.current) {
-              const newScrollHeight = messageContainerRef.current.scrollHeight;
-              const heightDifference =
-                newScrollHeight - previousScrollHeightRef.current;
-              messageContainerRef.current.scrollTop =
-                scrollPositionRef.current + heightDifference;
-            }
             setIsLoading(false);
           }, 200);
         } else {
@@ -127,35 +112,31 @@ export function Convo() {
     // Initial fetch
     fetchMessages();
 
-    // Debounce the scroll handler to prevent multiple fetches
-    let scrollTimeout: NodeJS.Timeout | null = null;
-
     function loadMessages(event: Event) {
       const target = event.currentTarget as HTMLDivElement;
-      if (target.scrollTop === 0 && !isLoading) {
-        if (scrollTimeout) clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => {
+      if (target.scrollTop === 0) {
+        setTimeout(() => {
           fetchMessages();
         }, 300);
+
+        prevScrollHeight.current = target.scrollHeight;
+      } else {
+        return;
       }
-
-      // Detect if user has scrolled up (away from bottom)
-      const isAtBottom =
-        target.scrollHeight - target.scrollTop <= target.clientHeight + 50;
-      setShouldScrollToBottom(isAtBottom);
     }
 
-    if (messageContainerRef.current) {
-      messageContainerRef.current.addEventListener("scroll", loadMessages);
-    }
+    messageContainerRef.current?.addEventListener("scroll", loadMessages);
 
     return () => {
       if (messageContainerRef.current) {
         lastMessageDateRef.current = new Date();
+        messageContainerRef.current?.removeEventListener(
+          "scroll",
+          loadMessages
+        );
 
-        messageContainerRef.current.removeEventListener("scroll", loadMessages);
+        prevScrollHeight.current = 0;
       }
-      if (scrollTimeout) clearTimeout(scrollTimeout);
     };
   }, [conversationId]);
 
@@ -182,10 +163,20 @@ export function Convo() {
 
   useEffect(() => {
     // Only scroll to bottom if user hasn't scrolled up or if it's the initial load
-    if (shouldScrollToBottom && scrollEle.current) {
-      scrollEle.current.scrollIntoView({ behavior: "instant" });
+    if (messages && messages.length <= 25 && messageContainerRef.current) {
+      messageContainerRef.current.scrollTo({
+        top: messageContainerRef.current.scrollHeight,
+        behavior: "instant",
+      });
+    } else {
+      messageContainerRef.current?.scrollTo({
+        top:
+          messageContainerRef.current.scrollHeight -
+          (prevScrollHeight.current as number),
+        behavior: "instant",
+      });
     }
-  }, [messages, shouldScrollToBottom]);
+  }, [messages, conversationId]);
 
   return selectedConversation ? (
     <div className="bg-sky-300 h-[100%] w-full rounded-r-md relative z-50 flex flex-col">
@@ -285,24 +276,6 @@ export function Convo() {
         <div ref={scrollEle}></div>
       </div>
 
-      {/* {showPreview && (
-        <>
-          <div className="absolute h-[80%] w-[100%] bottom-16 bg-gray-400/30 backdrop-blur-3xl">
-            <div className="relative h-[100%] w-[100%]">
-              <Preview src={showPreview} />
-              <button
-                type="button"
-                className="cursor-pointer rounded-full absolute right-2 top-2"
-                onClick={() => {
-                  setShowPreview("");
-                }}
-              >
-                <RxCross1 className="text-2xl text-black"></RxCross1>
-              </button>
-            </div>
-          </div>
-        </>
-      )} */}
       <ChatInput></ChatInput>
     </div>
   ) : (
@@ -388,25 +361,6 @@ export function Convo() {
         )}
         <div ref={scrollEle}></div>
       </div>
-
-      {/* {showPreview && (
-        <>
-          <div className="absolute h-[80%] w-[100%] bottom-16 bg-gray-400/30 backdrop-blur-3xl">
-            <div className="relative h-[100%] w-[100%]">
-              <Preview src={showPreview} />
-              <button
-                type="button"
-                className="cursor-pointer rounded-full absolute right-2 top-2"
-                onClick={() => {
-                  setShowPreview("");
-                }}
-              >
-                <RxCross1 className="text-2xl text-black"></RxCross1>
-              </button>
-            </div>
-          </div>
-        </>
-      )} */}
       <ChatInput></ChatInput>
     </div>
   );
