@@ -42,7 +42,6 @@ export async function getConversations(): Promise<ServerActionConversations> {
             userId: { not: userId }, // Exclude the logged-in user
           },
           select: {
-            id: true,
             user: {
               select: {
                 id: true,

@@ -3,15 +3,16 @@ export interface ConversationType {
   isGroup: boolean;
   groupName?: string | null;
   participants: {
-    id: string;
-    user: {
-      id: string;
-      profilePicture: string | null;
-      username: string;
-    };
+    user: Participant;
   }[];
   messages: { content: string | null; createdAt: Date; messageType: string }[];
   _count: { messages: number };
+}
+
+export interface Participant {
+  id: string;
+  profilePicture: string | null;
+  username: string;
 }
 
 export type SessionUser = {

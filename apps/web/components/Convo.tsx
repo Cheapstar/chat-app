@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ChatInput } from "./ChatInput";
 import { useAtom } from "jotai";
 import {
@@ -18,7 +18,7 @@ import { motion } from "motion/react";
 
 import { MessageType } from "../types/types";
 import axios from "axios";
-import { RxCross1 } from "react-icons/rx";
+import { RxChevronDown, RxCross1 } from "react-icons/rx";
 import { isSameDay, ModifiedTimeAgoForMessages } from "../utils/date";
 import React from "react";
 import { ImSpinner9 } from "react-icons/im";
@@ -47,7 +47,26 @@ export function Convo() {
 
   const prevScrollHeight = useRef<number>(null);
 
+  const [showSetToBottom, setShowSetToBottom] = useState<boolean>();
+
   const [socket] = useAtom(socketAtom);
+
+  const scrollToBottom = useCallback(() => {
+    if (!messageContainerRef.current) return;
+    messageContainerRef.current.scrollTo({
+      top: messageContainerRef.current.scrollHeight,
+      behavior: "instant",
+    });
+  }, []);
+
+  const maintainScrollAfterLoad = useCallback(() => {
+    if (!messageContainerRef.current || !prevScrollHeight.current) return;
+    const container = messageContainerRef.current;
+    container.scrollTo({
+      top: container.scrollHeight - prevScrollHeight.current,
+      behavior: "instant",
+    });
+  }, []);
 
   useEffect(() => {
     async function fetchMessages() {
@@ -114,6 +133,11 @@ export function Convo() {
 
     function loadMessages(event: Event) {
       const target = event.currentTarget as HTMLDivElement;
+
+      if (target.scrollHeight - target.scrollTop > target.clientHeight)
+        setShowSetToBottom(true);
+      else setShowSetToBottom(false);
+
       if (target.scrollTop === 0) {
         setTimeout(() => {
           fetchMessages();
@@ -161,22 +185,16 @@ export function Convo() {
     }
   }, [conversationId]);
 
+  // scroll positioning
   useEffect(() => {
-    // Only scroll to bottom if user hasn't scrolled up or if it's the initial load
-    if (messages && messages.length <= 25 && messageContainerRef.current) {
-      messageContainerRef.current.scrollTo({
-        top: messageContainerRef.current.scrollHeight,
-        behavior: "instant",
-      });
+    if (!messageContainerRef.current) return;
+
+    if (messages.length <= 25) {
+      scrollToBottom();
     } else {
-      messageContainerRef.current?.scrollTo({
-        top:
-          messageContainerRef.current.scrollHeight -
-          (prevScrollHeight.current as number),
-        behavior: "instant",
-      });
+      maintainScrollAfterLoad();
     }
-  }, [messages, conversationId]);
+  }, [messages, conversationId, scrollToBottom, maintainScrollAfterLoad]);
 
   return selectedConversation ? (
     <div className="bg-sky-300 h-[100%] w-full rounded-r-md relative z-50 flex flex-col">
@@ -203,6 +221,16 @@ export function Convo() {
             : selectedConversation?.participants[0]?.user.username}
         </div>
       </div>
+      {showSetToBottom && (
+        <button
+          className="absolute right-4 bottom-32 z-[1000] flex flex-col 
+        flex-wrap justify-center items-center cursor-pointer animate-bounce"
+          onClick={scrollToBottom}
+        >
+          <RxChevronDown className="text-5xl text-white rounded-full  bg-[#60B5FF] p-2 hover:bg-[#1B56FD]"></RxChevronDown>
+          <span className="text-sm">Scroll To Bottom</span>
+        </button>
+      )}
 
       <div
         className="flex flex-col grow gap-4 px-2 py-2 overflow-auto relative"

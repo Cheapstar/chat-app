@@ -153,7 +153,6 @@ export function useChatForm() {
               isGroup: false,
               participants: [
                 {
-                  id: session?.user.userId as string,
                   user: {
                     id: recipient?.id as string,
                     profilePicture: recipient?.profilePicture as string,

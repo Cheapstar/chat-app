@@ -169,7 +169,6 @@ export function ChatApp() {
               isGroup: false,
               participants: [
                 {
-                  id: "",
                   user: {
                     id: userResponse.data.message?.id as string,
                     profilePicture: userResponse.data.message
@@ -186,7 +185,7 @@ export function ChatApp() {
                   messageType: "compose",
                 },
               ],
-              _count: { messages: 1 },
+              _count: { messages: newMessages.length },
             };
 
             setConversations((prevState) => {
@@ -286,8 +285,8 @@ export function ChatApp() {
         <div className="bg-white text-4xl px-6 py-4 text-sky-700 sticky top-0 ">
           Chats
         </div>
-        <div className="flex flex-col  border-r border-gray-200 relative h-full overflow-auto ">
-          <div className="flex-1 overflow-auto ">
+        <div className="flex flex-col  border-r border-gray-200 relative h-full ">
+          <div className="flex-1 h-full">
             <ListOfContacts />
           </div>
           <button
