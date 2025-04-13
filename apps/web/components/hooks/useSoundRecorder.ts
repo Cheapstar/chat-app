@@ -11,6 +11,8 @@ export function useSoundRecorder() {
 
   const audioContextRef = useRef<AudioContext | null>(null);
 
+  const [hasRecorded, setHasRecorded] = useState<boolean>();
+
   async function startRecording() {
     try {
       const isAllowed = await navigator.permissions.query({
@@ -45,6 +47,7 @@ export function useSoundRecorder() {
       setAudioUrl("");
       setMediaRecorder(recorder);
       setIsRecording(true);
+      setHasRecorded(true);
     } catch (error) {
       alert(error);
       console.log("Error", error);
@@ -68,10 +71,12 @@ export function useSoundRecorder() {
     setAudioUrl(undefined);
     setMediaRecorder(null);
     setIsRecording(false);
+    setHasRecorded(false);
   }
 
   return {
     audioUrl,
+    setAudioUrl,
     isRecording,
     startRecording,
     stopRecording,
@@ -79,5 +84,7 @@ export function useSoundRecorder() {
     mediaRecorder,
     audioBlob,
     setAudioBlob,
+    hasRecorded,
+    setHasRecorded,
   };
 }

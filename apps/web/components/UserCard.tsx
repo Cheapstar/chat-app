@@ -3,8 +3,8 @@ import { useAtom } from "jotai";
 import Image from "next/image";
 import {
   conversationIdAtom,
+  conversationsAtom,
   LoadConvoAtom,
-  messagesAtom,
   recipientAtom,
   selectedConversationAtom,
 } from "../store/store";
@@ -25,10 +25,11 @@ export function UserCard({ user }: { user: User }) {
   const [LoadConvo, setLoadConvo] = useAtom(LoadConvoAtom);
   const [conversationId, setConversationId] = useAtom(conversationIdAtom);
   const [recepient, setRecepient] = useAtom(recipientAtom);
-  const [messages, setMessages] = useAtom(messagesAtom);
   const [selectedConversation, setSelectedConversation] = useAtom(
     selectedConversationAtom
   );
+
+  const [conversations] = useAtom(conversationsAtom);
 
   const router = useRouter();
 
@@ -40,8 +41,16 @@ export function UserCard({ user }: { user: User }) {
       username: user.username,
       profilePicture: user.profilePicture as string,
     });
-    setSelectedConversation(undefined);
-    setMessages([]);
+
+    // Check if Conversation Exists with user if yes then
+    if (user.conversationId) {
+      setSelectedConversation(
+        conversations.find((c) => c.id === user.conversationId)
+      );
+    } else {
+      setSelectedConversation(undefined);
+    }
+
     router.push("/chat");
   }
 

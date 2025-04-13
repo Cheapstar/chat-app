@@ -25,7 +25,7 @@ export async function getConversations(): Promise<ServerActionConversations> {
     };
 
   try {
-    const conversations = await prisma.conversation.findMany({
+    const result = await prisma.conversation.findMany({
       where: {
         participants: {
           some: {
@@ -57,9 +57,24 @@ export async function getConversations(): Promise<ServerActionConversations> {
             createdAt: "desc",
           },
           select: {
+            id: true,
+            senderId: true,
             content: true,
             createdAt: true,
             messageType: true,
+            attachmentUrl: true,
+            conversationId: true,
+            statusUpdates: {
+              select: {
+                status: true,
+                userId: true,
+              },
+            },
+            sender: {
+              select: {
+                username: true,
+              },
+            },
           },
         },
         _count: {
@@ -80,20 +95,32 @@ export async function getConversations(): Promise<ServerActionConversations> {
       },
     });
 
-    conversations.sort((a, b) => {
-      const dateA = a.messages[0]?.createdAt
-        ? new Date(a.messages[0].createdAt).getTime()
-        : 0;
-      const dateB = b.messages[0]?.createdAt
-        ? new Date(b.messages[0].createdAt).getTime()
-        : 0;
-      return dateB - dateA;
-    });
+    const conversations = result
+      .map((c) => {
+        return {
+          ...c,
+          messages: [
+            {
+              ...c.messages[0],
+              isSender: session?.user.userId === c.messages[0]?.senderId,
+            },
+          ],
+        };
+      })
+      .sort((a, b) => {
+        const dateA = a.messages[0]?.createdAt
+          ? new Date(a.messages[0].createdAt).getTime()
+          : 0;
+        const dateB = b.messages[0]?.createdAt
+          ? new Date(b.messages[0].createdAt).getTime()
+          : 0;
+        return dateB - dateA;
+      });
 
     return {
       success: true,
       data: {
-        conversations,
+        conversations: conversations as ConversationType[],
       },
     };
   } catch (err) {

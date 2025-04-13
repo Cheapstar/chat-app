@@ -162,12 +162,9 @@ export function useChatForm() {
               ],
               messages: [
                 {
-                  content: (
-                    sentMessages[sentMessages.length - 1] as MessageType
-                  ).content,
-                  createdAt: new Date(),
-                  messageType: "compose",
-                },
+                  ...sentMessages[sentMessages.length - 1],
+                  isSender: true,
+                } as MessageType,
               ],
               _count: { messages: 0 },
             };
@@ -188,6 +185,27 @@ export function useChatForm() {
               (sentMessages[sentMessages.length - 1] as MessageType)
                 .conversationId
             );
+          } else {
+            setConversations((prevState) => {
+              const updatedConversations = prevState.map(
+                (convo: ConversationType) =>
+                  convo.id === conversationId
+                    ? {
+                        ...convo,
+                        messages: [sentMessages[sentMessages.length - 1]],
+                      }
+                    : convo
+              ) as ConversationType[];
+              return [...updatedConversations].sort((a, b) => {
+                const dateA = a.messages[0]?.createdAt
+                  ? new Date(a.messages[0].createdAt).getTime()
+                  : 0;
+                const dateB = b.messages[0]?.createdAt
+                  ? new Date(b.messages[0].createdAt).getTime()
+                  : 0;
+                return dateB - dateA;
+              });
+            });
           }
 
           setTimeout(() => {
@@ -214,8 +232,8 @@ export function useChatForm() {
 
       // Here We Will setup the client side changes
 
+      const newMessages: MessageType[] = [];
       if (conversationId) {
-        const newMessages: MessageType[] = [];
         // New Messages
         // Check if there exists a urls or not
 
@@ -279,14 +297,7 @@ export function useChatForm() {
           convo.id === conversationId
             ? {
                 ...convo,
-                messages: [
-                  {
-                    ...convo.messages[0],
-                    content: data.message,
-                    createdAt: new Date().toISOString(),
-                    messageType: "compose",
-                  },
-                ],
+                messages: [newMessages[newMessages.length - 1]],
               }
             : convo
         ) as ConversationType[];
@@ -304,6 +315,7 @@ export function useChatForm() {
 
       setConversations(sortedConversations as ConversationType[]);
       setValue("files", [], { shouldDirty: true });
+      setValue("message", "", { shouldDirty: true });
       setUrls([]);
       reset();
 

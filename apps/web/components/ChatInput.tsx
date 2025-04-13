@@ -40,6 +40,8 @@ export function ChatInput() {
     audioUrl,
     deleteAudio,
     audioBlob,
+    setAudioUrl,
+    hasRecorded,
   } = useSoundRecorder();
   const [recordingTime, setRecordingTime] = useState(0);
 
@@ -56,7 +58,7 @@ export function ChatInput() {
   // Create file URLs for preview
   useEffect(() => {
     const files = watch("files");
-    if (files && files.length > 0 && !audioUrl) {
+    if (files && files.length > 0 && !hasRecorded) {
       const urlRecords: { type: string; url: string }[] = [];
       Array.from(files).map((file) => {
         const url = URL.createObjectURL(file.file);
@@ -68,7 +70,7 @@ export function ChatInput() {
         setShowPreview(true);
       }
     }
-  }, [watch("files")]);
+  }, [watch("files"), hasRecorded]);
 
   // Cleanup URLs when component unmounts
   useEffect(() => {
@@ -184,13 +186,14 @@ export function ChatInput() {
 
   return (
     <form
-      className="flex flex-col bg-gray-200 py-2.5 px-4 rounded-br-md z-50 "
+      className=" flex flex-col bg-gray-200 py-2.5 px-4 rounded-br-md z-50 "
       onSubmit={(event) => {
         event.preventDefault();
-        handleSubmit();
+        setAudioUrl("");
         setShowPreview(false);
-
-        deleteAudio();
+        handleSubmit().then((resolve) => {
+          deleteAudio();
+        });
       }}
     >
       {audioUrl && (
@@ -206,6 +209,8 @@ export function ChatInput() {
             onClick={() => {
               deleteAudio();
               setValue("files", [], { shouldDirty: true });
+              setAudioUrl("");
+              setUrls([]);
             }}
           >
             <RxCross2 className="text-xl text-gray-600" />

@@ -14,7 +14,7 @@ import {
   userAtom,
 } from "../store/store";
 import { getMessages } from "../actions/getMessages";
-import { motion } from "motion/react";
+import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 
 import { MessageType } from "../types/types";
 import axios from "axios";
@@ -23,6 +23,8 @@ import { isSameDay, ModifiedTimeAgoForMessages } from "../utils/date";
 import React from "react";
 import { ImSpinner9 } from "react-icons/im";
 import { Message } from "./Message";
+import { ConvoTop } from "./ConvoTop";
+import { ConvoAbout } from "./ConvoAbout";
 
 export function Convo() {
   const [messages, setMessages] = useAtom(messagesAtom);
@@ -48,6 +50,9 @@ export function Convo() {
   const prevScrollHeight = useRef<number>(null);
 
   const [showSetToBottom, setShowSetToBottom] = useState<boolean>();
+
+  // Show About Section of Conversation
+  const [showAbout, setShowAbout] = useState<boolean>(false);
 
   const [socket] = useAtom(socketAtom);
 
@@ -134,7 +139,7 @@ export function Convo() {
     function loadMessages(event: Event) {
       const target = event.currentTarget as HTMLDivElement;
 
-      if (target.scrollHeight - target.scrollTop > target.clientHeight)
+      if (target.scrollHeight - target.scrollTop > target.clientHeight + 100)
         setShowSetToBottom(true);
       else setShowSetToBottom(false);
 
@@ -196,200 +201,169 @@ export function Convo() {
     }
   }, [messages, conversationId, scrollToBottom, maintainScrollAfterLoad]);
 
-  return selectedConversation ? (
-    <div className="bg-sky-300 h-[100%] w-full rounded-r-md relative z-50 flex flex-col">
-      <div
-        className="h-[10%] bg-white rounded-tr-md flex px-4 py-2 items-center 
-                          gap-6 shadow-2xl border-1 border-gray-200"
-      >
-        <div className="rounded-full flex items-center border-white border-1 shadow-2xl">
-          <img
-            className="rounded-full w-12 h-12 object-cover"
-            src={`${
-              selectedConversation?.isGroup
-                ? "/default_Profile.png"
-                : selectedConversation?.participants[0]?.user.profilePicture
-                  ? `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${selectedConversation?.participants[0]?.user.profilePicture}`
-                  : "/default_Profile.png"
-            }`}
-            alt="Profile-Picture"
-          ></img>
-        </div>
-        <div className="grow text-lg">
-          {selectedConversation?.isGroup
-            ? selectedConversation.groupName
-            : selectedConversation?.participants[0]?.user.username}
-        </div>
-      </div>
-      {showSetToBottom && (
-        <button
-          className="absolute right-4 bottom-32 z-[1000] flex flex-col 
-        flex-wrap justify-center items-center cursor-pointer animate-bounce"
-          onClick={scrollToBottom}
-        >
-          <RxChevronDown className="text-5xl text-white rounded-full  bg-[#60B5FF] p-2 hover:bg-[#1B56FD]"></RxChevronDown>
-          <span className="text-sm">Scroll To Bottom</span>
-        </button>
-      )}
+  const convoName = selectedConversation
+    ? selectedConversation?.isGroup
+      ? selectedConversation.groupName
+      : selectedConversation?.participants[0]?.user.username
+    : recipient?.username;
 
-      <div
-        className="flex flex-col grow gap-4 px-2 py-2 overflow-auto relative"
-        ref={messageContainerRef}
-      >
-        {isLoading && (
-          <div className="flex justify-center absolute top-auto">
-            <ImSpinner9 className="animate-spin text-lg text-white" />
-          </div>
-        )}
+  const convoProfile = selectedConversation
+    ? selectedConversation?.isGroup
+      ? "/default_Profile.png"
+      : selectedConversation?.participants[0]?.user.profilePicture
+        ? `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${selectedConversation?.participants[0]?.user.profilePicture}`
+        : "/default_Profile.png"
+    : recipient?.profilePicture;
 
-        {messages.length > 0 ? (
-          messages.map((message, index) => {
-            // Check if this is the first message or a new day compared to previous message
-            const currentMessageDate = new Date(message.createdAt);
-            const shouldRenderFlag =
-              index === 0 ||
-              !isSameDay(
-                currentMessageDate,
-                new Date((messages[index - 1] as MessageType).createdAt)
-              );
+  return (
+    <div className="h-full w-full flex">
+      <LayoutGroup>
+        <AnimatePresence>
+          <motion.div
+            layout
+            key="Convo-Top"
+            className="h-[100%] w-full rounded-r-md relative z-50 flex flex-col bg-sky-300"
+          >
+            {/*Top Bar */}
+            <motion.div layout>
+              <ConvoTop
+                convoName={convoName as string}
+                convoProfile={convoProfile as string}
+                onClick={() => {
+                  setShowAbout((value) => !value);
+                }}
+              ></ConvoTop>
+            </motion.div>
 
-            return (
-              <React.Fragment key={message.id}>
-                {shouldRenderFlag && (
-                  <motion.div
-                    className="flex justify-center"
-                    initial={{
-                      scale: 0.8,
-                      opacity: 0.8,
-                    }}
-                    animate={{
-                      scale: 1,
-                      opacity: 1,
-                    }}
-                  >
-                    <p className="bg-gray-300 text-gray-600 text-sm rounded-md px-2.5 py-1.5">
-                      {ModifiedTimeAgoForMessages(currentMessageDate)}
-                    </p>
-                  </motion.div>
-                )}
-                <motion.div
-                  key={message.id}
-                  initial={{
-                    scale: 0.4,
-                    opacity: 0.8,
-                    x: 100,
-                  }}
-                  animate={{
-                    scale: 1,
-                    opacity: 1,
-                    x: 0,
-                  }}
-                >
-                  <Message
-                    message={message}
-                    isGroup={
-                      conversations.find((value) => value.id === conversationId)
-                        ?.isGroup as boolean
-                    }
-                  ></Message>
-                </motion.div>
-              </React.Fragment>
-            );
-          })
-        ) : isLoading ? (
-          ""
-        ) : (
-          <p className="text-center text-gray-600">No messages yet.</p>
-        )}
-        <div ref={scrollEle}></div>
-      </div>
+            {/* Set To Bottom Button*/}
+            {showSetToBottom && (
+              <button
+                className="absolute right-4 bottom-20 z-[1000] flex flex-col 
+                        flex-wrap justify-center items-center cursor-pointer animate-bounce"
+                onClick={scrollToBottom}
+              >
+                <RxChevronDown className="text-5xl text-white rounded-full  bg-[#60B5FF] p-2 hover:bg-[#1B56FD]"></RxChevronDown>
+                <span className="text-sm">Scroll To Bottom</span>
+              </button>
+            )}
 
-      <ChatInput></ChatInput>
-    </div>
-  ) : (
-    <div className="bg-sky-300 h-[100%] w-full rounded-r-md relative z-50">
-      <div
-        className="h-[10%] bg-white rounded-tr-md flex px-4 py-2 items-center 
-                                gap-6 shadow-2xl border-1 border-gray-200"
-      >
-        <div className="rounded-full flex items-center border-white border-1 shadow-2xl">
-          <img
-            className="rounded-full w-12 h-12 object-cover"
-            src={`${recipient?.profilePicture ? `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${recipient?.profilePicture}` : "/default_Profile.png"}`}
-            alt="Profile-Picture"
-          ></img>
-        </div>
-        <div className="grow text-lg">{recipient?.username}</div>
-      </div>
-      <div
-        className="flex flex-col h-[80%] gap-4 px-2 py-2 overflow-auto relative"
-        ref={messageContainerRef}
-      >
-        {isLoading && (
-          <div className="flex justify-center absolute top-auto">
-            <ImSpinner9 className="animate-spin text-lg text-white" />
-          </div>
-        )}
+            {/*Messages */}
+            <motion.div
+              layout
+              className="flex flex-col grow gap-4 px-2 py-2 overflow-auto relative"
+              ref={messageContainerRef}
+            >
+              {isLoading && (
+                <div className="flex justify-center absolute top-auto">
+                  <ImSpinner9 className="animate-spin text-lg text-white" />
+                </div>
+              )}
 
-        {messages.length > 0 ? (
-          messages.map((message, index) => {
-            // Check if this is the first message or a new day compared to previous message
-            const currentMessageDate = new Date(message.createdAt);
-            const shouldRenderFlag =
-              index === 0 ||
-              !isSameDay(
-                currentMessageDate,
-                new Date((messages[index - 1] as MessageType).createdAt)
-              );
+              {messages.length > 0 ? (
+                messages.map((message, index) => {
+                  // Check if this is the first message or a new day compared to previous message
+                  const currentMessageDate = new Date(message.createdAt);
+                  const shouldRenderFlag =
+                    index === 0 ||
+                    !isSameDay(
+                      currentMessageDate,
+                      new Date((messages[index - 1] as MessageType).createdAt)
+                    );
 
-            return (
-              <React.Fragment key={message.id}>
-                {shouldRenderFlag && (
-                  <motion.div
-                    className="flex justify-center"
-                    initial={{
-                      scale: 0.8,
-                      opacity: 0.8,
-                    }}
-                    animate={{
-                      scale: 1,
-                      opacity: 1,
-                    }}
-                  >
-                    <p className="bg-gray-300 text-gray-600 text-sm rounded-md px-2.5 py-1.5">
-                      {ModifiedTimeAgoForMessages(currentMessageDate)}
-                    </p>
-                  </motion.div>
-                )}
-                <motion.div
-                  key={message.id}
-                  initial={{
-                    scale: 0.4,
-                    opacity: 0.8,
-                    x: 100,
-                  }}
-                  animate={{
-                    scale: 1,
-                    opacity: 1,
-                    x: 0,
-                  }}
-                >
-                  <Message
-                    message={message}
-                    isGroup={false}
-                  ></Message>
-                </motion.div>
-              </React.Fragment>
-            );
-          })
-        ) : isLoading ? (
-          ""
-        ) : (
-          <p className="text-center text-gray-600">No messages yet.</p>
-        )}
-        <div ref={scrollEle}></div>
-      </div>
-      <ChatInput></ChatInput>
+                  return (
+                    <React.Fragment key={message.id}>
+                      {shouldRenderFlag && (
+                        <motion.div
+                          layout
+                          key={`Date-${currentMessageDate}-${index}`}
+                          className="flex justify-center"
+                          initial={{
+                            scale: 0.8,
+                            opacity: 0.8,
+                          }}
+                          animate={{
+                            scale: 1,
+                            opacity: 1,
+                          }}
+                        >
+                          <p className="bg-gray-300 text-gray-600 text-sm rounded-md px-2.5 py-1.5">
+                            {ModifiedTimeAgoForMessages(currentMessageDate)}
+                          </p>
+                        </motion.div>
+                      )}
+                      <motion.div
+                        layout
+                        key={message.id}
+                        initial={{
+                          scale: 0.4,
+                          opacity: 0.8,
+                          x: 100,
+                        }}
+                        animate={{
+                          scale: 1,
+                          opacity: 1,
+                          x: 0,
+                        }}
+                      >
+                        <Message
+                          message={message}
+                          isGroup={
+                            conversations.find(
+                              (value) => value.id === conversationId
+                            )?.isGroup as boolean
+                          }
+                        ></Message>
+                      </motion.div>
+                    </React.Fragment>
+                  );
+                })
+              ) : isLoading ? (
+                ""
+              ) : (
+                <p className="text-center text-gray-600">No messages yet.</p>
+              )}
+              <div ref={scrollEle}></div>
+            </motion.div>
+
+            {/*Chat Input */}
+            <motion.div layout>
+              <ChatInput></ChatInput>
+            </motion.div>
+          </motion.div>
+
+          {/* About Section */}
+          {showAbout && (
+            <motion.div
+              layout
+              key="Convo-About"
+              className="px-4 pt-8 min-w-[300px] max-w-[400px] relative overflow-hidden"
+            >
+              <button className="absolute top-5 right-5 hover:bg-gray-200 transition-all rounded-full p-2">
+                <RxCross1 className="text-2xl"></RxCross1>
+              </button>
+              <motion.div
+                initial={{
+                  x: 100,
+                  opacity: 0,
+                }}
+                animate={{
+                  x: 0,
+                  opacity: 1,
+                }}
+                exit={{
+                  x: 100,
+                  opacity: 0,
+                }}
+                transition={{
+                  duration: 0.4,
+                }}
+              >
+                <ConvoAbout></ConvoAbout>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </LayoutGroup>
     </div>
   );
 }

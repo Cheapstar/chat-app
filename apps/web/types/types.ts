@@ -5,7 +5,7 @@ export interface ConversationType {
   participants: {
     user: Participant;
   }[];
-  messages: { content: string | null; createdAt: Date; messageType: string }[];
+  messages: MessageType[];
   _count: { messages: number };
 }
 

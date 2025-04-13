@@ -10,7 +10,14 @@ import {
   selectedConversationAtom,
 } from "../store/store";
 import { ModifiedTimeAgo, timeAgo } from "../utils/date";
-import { ConversationType } from "../types/types";
+import { ConversationType, MessageType } from "../types/types";
+import { IoIosMusicalNotes } from "react-icons/io";
+import { FaPlay } from "react-icons/fa";
+import { TiDocumentText } from "react-icons/ti";
+import { CiFileOn } from "react-icons/ci";
+import { CiImageOn } from "react-icons/ci";
+import { PiClockLight } from "react-icons/pi";
+import { LiaCheckDoubleSolid } from "react-icons/lia";
 
 export function ContactCard({
   conversation,
@@ -46,6 +53,18 @@ export function ContactCard({
     }
   }
 
+  let status = "read";
+  for (
+    let i = 0;
+    i < (conversation.messages[0] as MessageType).statusUpdates.length;
+    i++
+  ) {
+    if (conversation.messages[0]?.statusUpdates[i]?.status !== "read") {
+      status = conversation.messages[0]?.statusUpdates[i]?.status as string;
+      break;
+    }
+  }
+
   return (
     <div className="flex px-3 py-2 items-center overflow-ellipsis relative">
       <button
@@ -73,11 +92,42 @@ export function ContactCard({
                 ? conversation.groupName
                 : conversation?.participants[0]?.user?.username}
             </p>
-            <p className="text-left text-sm max-w-56 break-words text-ellipsis line-clamp-1">
-              {conversation.messages[0]?.messageType === "text"
-                ? conversation?.messages[0]?.content
-                : "Image is sent"}
-            </p>
+            <div className="flex gap-2">
+              {conversation.messages[0]?.isSender && (
+                <p className="flex items-end ">
+                  {status === "sent" ? (
+                    <PiClockLight className="text-lg" />
+                  ) : (
+                    <LiaCheckDoubleSolid
+                      className={`text-lg transition-all ${
+                        status === "read" ? "text-green-400" : "text-gray-500"
+                      }`}
+                    />
+                  )}
+                </p>
+              )}
+
+              {conversation.messages[0]?.messageType === "audio" && (
+                <IoIosMusicalNotes></IoIosMusicalNotes>
+              )}
+              {conversation.messages[0]?.messageType === "video" && (
+                <FaPlay></FaPlay>
+              )}
+              {conversation.messages[0]?.messageType === "pdf" && (
+                <TiDocumentText></TiDocumentText>
+              )}
+              {conversation.messages[0]?.messageType === "image" && (
+                <CiImageOn></CiImageOn>
+              )}
+              {conversation.messages[0]?.messageType === "unknown" && (
+                <CiFileOn></CiFileOn>
+              )}
+              <p className="text-left text-sm max-w-56 break-words text-ellipsis line-clamp-1">
+                {conversation.messages[0]?.content
+                  ? conversation.messages[0]?.content
+                  : ""}
+              </p>
+            </div>
           </div>
           {conversation._count.messages > 0 && (
             <div className="px-2 py-0.5 rounded-full bg-green-400 text-white absolute top-4 right-14 text-[12px]">

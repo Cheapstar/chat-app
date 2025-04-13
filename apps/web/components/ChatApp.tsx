@@ -86,9 +86,14 @@ export function ChatApp() {
 
       // Update the ui
       setConversations((prev) => {
-        const updated = prev.map((convo) => {
+        const updated = prev.map((convo: ConversationType) => {
           if (convo.id === (newMessages[0] as MessageType).conversationId) {
             convo._count.messages = 0;
+
+            convo.messages[0] = {
+              ...newMessages[newMessages.length - 1],
+              isSender: false,
+            } as MessageType;
           }
           return convo;
         });
@@ -134,13 +139,10 @@ export function ChatApp() {
             if (convo.id === (newMessages[0] as MessageType).conversationId) {
               convo._count.messages += 1;
 
-              if (convo.messages[0]) {
-                convo.messages[0].content = (newMessages[0] as MessageType)
-                  ?.content as string;
-                convo.messages[0].createdAt = (newMessages[0] as MessageType)
-                  ?.createdAt as Date;
-                convo.messages[0].messageType = "compose";
-              }
+              convo.messages[0] = {
+                ...newMessages[newMessages.length - 1],
+                isSender: false,
+              } as MessageType;
             }
             return convo;
           });
@@ -179,11 +181,9 @@ export function ChatApp() {
               ],
               messages: [
                 {
-                  content: (newMessages[newMessages.length - 1] as MessageType)
-                    .content as string,
-                  createdAt: new Date(),
-                  messageType: "compose",
-                },
+                  ...newMessages[newMessages.length - 1],
+                  isSender: false,
+                } as MessageType,
               ],
               _count: { messages: newMessages.length },
             };
@@ -214,9 +214,12 @@ export function ChatApp() {
 
   const updateMessageStatus = useCallback((payload: any) => {
     console.log("Received the update status request");
-    const { conversationId, userId: oneWhoUpdatedTheStatus } = payload;
+    const {
+      conversationId: recvConversationId,
+      userId: oneWhoUpdatedTheStatus,
+    } = payload;
 
-    if (conversationId === currentConvoId.current) {
+    if (recvConversationId === currentConvoId.current) {
       setTimeout(() => {
         setMessages((prevMessages) => {
           return prevMessages.map((message) => {
@@ -243,11 +246,42 @@ export function ChatApp() {
         });
       }, 500);
     }
+
+    setTimeout(() => {
+      setConversations((prevState) => {
+        const updatedConversations = prevState.map((convo: ConversationType) =>
+          convo.id === recvConversationId
+            ? {
+                ...convo,
+                messages: [
+                  {
+                    ...convo.messages[0],
+                    statusUpdates: convo.messages[0]?.statusUpdates.map(
+                      (value) => {
+                        if (value.userId === oneWhoUpdatedTheStatus) {
+                          return {
+                            ...value,
+                            status: "read",
+                          };
+                        }
+                        return value;
+                      }
+                    ),
+                  },
+                ],
+              }
+            : convo
+        ) as ConversationType[];
+
+        return updatedConversations;
+      });
+    }, 1000);
   }, []);
 
   const addedToGroup = useCallback((payload: any) => {
     setConversations((prevState) => [payload.conversation, ...prevState]);
   }, []);
+
   // Socket event handler
   useEffect(() => {
     if (!socket) return;
@@ -280,12 +314,12 @@ export function ChatApp() {
   }, [incomingMessage]);
 
   return (
-    <div className="bg-white h-[100%] shadow-2xs border-1 border-gray-200 rounded-sm flex rounded-r-md overflow-hidden">
+    <div className="bg-white h-[100%] shadow-2xs border-1 border-gray-200 rounded-sm flex rounded-r-md ">
       <div className="flex flex-col  min-w-[30%]">
         <div className="bg-white text-4xl px-6 py-4 text-sky-700 sticky top-0 ">
           Chats
         </div>
-        <div className="flex flex-col  border-r border-gray-200 relative h-full ">
+        <div className="flex flex-col  border-r border-gray-200 relative h-full overflow-auto">
           <div className="flex-1 h-full">
             <ListOfContacts />
           </div>
