@@ -7,6 +7,7 @@ import {
   UpdateMessageStatusPayload,
 } from "../types.js";
 import { prisma } from "@repo/database";
+import { Redis } from "ioredis";
 
 // Each Request must come with the userId of the client
 // structure of the request {
@@ -19,10 +20,21 @@ export class WebSocketClient {
   private wss: WebSocketServer;
   private CLIENTS: Map<string, WebSocket> = new Map<string, WebSocket>(); // userId --- WS
   handlers: Map<string, Map<string, handlerFn[]>> = new Map(); // userId --- (type --- handler)
+  private redis: Redis;
+  private redisPublisher: Redis;
+  private redisSubscriber: Redis;
 
-  constructor(server: HTTPServer) {
+  constructor(
+    server: HTTPServer,
+    redis: Redis,
+    redisPublisher: Redis,
+    redisSubscriber: Redis
+  ) {
     this.wss = new WebSocketServer({ server });
-
+    this.redis = redis;
+    this.redisPublisher = redisPublisher;
+    this.redisSubscriber = redisSubscriber;
+    this.setUpRedis();
     this.connect();
   }
 
@@ -52,6 +64,8 @@ export class WebSocketClient {
       ws.on("close", () => {
         console.log("Client has terminated the connection");
         // Remove the user from CLIENTS and handlers maps
+        this.redis.del(`online:${userId}`);
+
         if (userId) {
           this.CLIENTS.delete(userId);
           this.handlers.delete(userId);
@@ -82,9 +96,14 @@ export class WebSocketClient {
   };
 
   // to send the message
-  send = (userId: string, type: string, payload: any) => {
-    const ws = this.CLIENTS.get(userId);
+  send = async (userId: string, type: string, payload: any) => {
+    const checkOnline = await this.redis.get(`online:${userId}`);
+    if (checkOnline !== "1") {
+      console.log("User is not online");
+      return;
+    }
 
+    const ws = this.CLIENTS.get(userId);
     if (ws && ws.readyState === WebSocket.OPEN) {
       const message = {
         type,
@@ -93,13 +112,21 @@ export class WebSocketClient {
 
       ws.send(JSON.stringify(message));
     } else {
-      console.error("WebSocket is not connnected");
+      // propagate the message through the channel
+      console.log("Checking if the user Exists on any other Server");
+      this.redisPublisher.publish(
+        "message-channel",
+        JSON.stringify({ type, userId, payload })
+      );
     }
   };
 
   registerUser = (userId: string, ws: WebSocket) => {
     // storing the user
     this.CLIENTS.set(userId, ws as WebSocket);
+
+    // storing in the redis , for scaling
+    this.redis.set(`online:${userId}`, "1");
 
     if (!this.handlers.has(userId)) {
       this.handlers.set(userId, new Map());
@@ -109,6 +136,20 @@ export class WebSocketClient {
 
     this.send(userId, "userRegisterd", {
       message: "User has Been Registered Thank You",
+    });
+  };
+
+  setUpRedis = () => {
+    this.redisSubscriber.subscribe("message-channel");
+
+    this.redisSubscriber.on("message", (_, raw) => {
+      const { type, payload, userId } = JSON.parse(raw);
+
+      const recpWs = this.CLIENTS.get(userId);
+
+      if (recpWs && recpWs.readyState === WebSocket.OPEN) {
+        recpWs.send(JSON.stringify({ type, payload }));
+      }
     });
   };
 

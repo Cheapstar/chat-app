@@ -338,7 +338,10 @@ export function Convo() {
               key="Convo-About"
               className="px-4 pt-8 min-w-[300px] max-w-[400px] relative overflow-hidden"
             >
-              <button className="absolute top-5 right-5 hover:bg-gray-200 transition-all rounded-full p-2">
+              <button
+                className="absolute top-5 right-5 hover:bg-gray-200 transition-all rounded-full p-2"
+                onClick={() => setShowAbout(false)}
+              >
                 <RxCross1 className="text-2xl"></RxCross1>
               </button>
               <motion.div

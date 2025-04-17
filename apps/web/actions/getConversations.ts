@@ -99,12 +99,15 @@ export async function getConversations(): Promise<ServerActionConversations> {
       .map((c) => {
         return {
           ...c,
-          messages: [
-            {
-              ...c.messages[0],
-              isSender: session?.user.userId === c.messages[0]?.senderId,
-            },
-          ],
+          messages:
+            c.messages.length > 0
+              ? [
+                  {
+                    ...c.messages[0],
+                    isSender: session?.user.userId === c.messages[0]?.senderId,
+                  },
+                ]
+              : [],
         };
       })
       .sort((a, b) => {

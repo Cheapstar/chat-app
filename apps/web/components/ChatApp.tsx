@@ -253,22 +253,25 @@ export function ChatApp() {
           convo.id === recvConversationId
             ? {
                 ...convo,
-                messages: [
-                  {
-                    ...convo.messages[0],
-                    statusUpdates: convo.messages[0]?.statusUpdates.map(
-                      (value) => {
-                        if (value.userId === oneWhoUpdatedTheStatus) {
-                          return {
-                            ...value,
-                            status: "read",
-                          };
-                        }
-                        return value;
-                      }
-                    ),
-                  },
-                ],
+                messages:
+                  convo.messages.length > 0
+                    ? [
+                        {
+                          ...convo.messages[0],
+                          statusUpdates: convo.messages[0]?.statusUpdates.map(
+                            (value) => {
+                              if (value.userId === oneWhoUpdatedTheStatus) {
+                                return {
+                                  ...value,
+                                  status: "read",
+                                };
+                              }
+                              return value;
+                            }
+                          ),
+                        },
+                      ]
+                    : [],
               }
             : convo
         ) as ConversationType[];
@@ -297,6 +300,7 @@ export function ChatApp() {
 
     return () => {
       socket.off("new-message", onNewMessage);
+      socket.off("added-to-group", addedToGroup);
       socket.off("update-message-status", updateMessageStatus);
     };
   }, [socket]);

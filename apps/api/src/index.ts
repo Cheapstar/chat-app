@@ -1,6 +1,7 @@
 import express from "express";
 import { WebSocketClient } from "./WebSocketServer/WebSocketServer.js";
 import dotenv from "dotenv";
+import { Redis } from "ioredis";
 
 dotenv.config();
 
@@ -12,7 +13,15 @@ const startServer = async () => {
     console.log("WebSocket server is running at http://localhost:8080");
   });
 
-  const webSocket = await new WebSocketClient(httpServer);
+  const redis = new Redis();
+  const redisPublisher = new Redis();
+  const redisSubscriber = new Redis();
+  const webSocket = new WebSocketClient(
+    httpServer,
+    redis,
+    redisPublisher,
+    redisSubscriber
+  );
 
   app.get("/", (req, res) => {
     res.send("WebSocket server is running at http://localhost:8080");

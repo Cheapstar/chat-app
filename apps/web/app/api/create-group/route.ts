@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../lib/auth";
 import { prisma } from "@repo/database";
-
+import { ConversationType } from "../../../types/types";
 interface CreateGroupRequest {
   groupName: string;
   selectedMembers: string[];
@@ -65,17 +65,7 @@ export async function POST(request: Request) {
             },
           },
         },
-        messages: {
-          take: 1,
-          orderBy: {
-            createdAt: "desc",
-          },
-          select: {
-            content: true,
-            createdAt: true,
-            messageType: true,
-          },
-        },
+        messages: {},
         _count: {
           select: {
             messages: {
@@ -100,7 +90,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         message: "Group created successfully",
-        conversation,
+        conversation: conversation,
       },
       { status: 201 }
     );
