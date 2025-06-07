@@ -1,9 +1,9 @@
-
+import ChatAppHomepage from "../components/Home";
 
 export default function Home() {
   return (
-    <div >
-      Home Thy Page
+    <div>
+      <ChatAppHomepage></ChatAppHomepage>
     </div>
   );
 }
