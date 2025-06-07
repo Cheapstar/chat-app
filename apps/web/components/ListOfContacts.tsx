@@ -8,6 +8,7 @@ import { motion } from "motion/react";
 import { ConversationType } from "../types/types";
 import { IoIosSearch } from "react-icons/io";
 import { RxCross2 } from "react-icons/rx";
+import { useRouter } from "next/navigation";
 
 export function ListOfContacts() {
   const [conversations, setConversations] = useAtom(conversationsAtom);
@@ -18,6 +19,7 @@ export function ListOfContacts() {
   const [searchText, setSearchText] = useState<string>("");
 
   const searchTextRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     async function fetchConversations() {
@@ -106,9 +108,33 @@ export function ListOfContacts() {
 
     return (
       <>
-        {(searchText ? matchedConversation : conversations).map(
-          (conversation, index) => {
-            return (
+        {(searchText ? matchedConversation : conversations).length === 0 ? (
+          <div className="flex flex-col items-center justify-center mt-10 text-center text-gray-600">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-10 w-10 mb-4 text-gray-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 10h.01M12 10h.01M16 10h.01M21 16.5a2.5 2.5 0 00-5 0v.5H8v-.5a2.5 2.5 0 00-5 0V18a1 1 0 001 1h16a1 1 0 001-1v-1.5z"
+              />
+            </svg>
+            <p className="mb-3">No conversations found</p>
+            <button
+              onClick={() => router.push("/explore")} // change to your actual route
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Find Some Friends
+            </button>
+          </div>
+        ) : (
+          (searchText ? matchedConversation : conversations).map(
+            (conversation, index) => (
               <div
                 key={conversation?.id}
                 className="flex flex-col hover:bg-gray-200"
@@ -127,8 +153,8 @@ export function ListOfContacts() {
                   <ContactCard conversation={conversation} />
                 </motion.div>
               </div>
-            );
-          }
+            )
+          )
         )}
       </>
     );
